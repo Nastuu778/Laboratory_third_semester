@@ -7,18 +7,101 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            cpack_generator: DEB
+            artifact_name: helloworld-0.0.${{ github.run_number }}-Linux.deb
+          - os: windows-latest
+            cpack_generator: NSIS
+            artifact_name: helloworld-0.0.${{ github.run_number }}-Windows.exe
+    
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
+    
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
-      - run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
-      - run: cmake . -DPATCH_VERSION=${{ github.run_number }}
-      - run: cmake --build .
-      - run: cmake --build . --target test
-      - run: cmake --build . --target package
+      
+      # Установка зависимостей для Linux
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
+      
+      # Установка зависимостей для Windows
+      - name: Install Windows dependencies
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install boost -y
+          choco install nsis -y
+      
+      - name: Configure CMake
+        run: cmake . -DPATCH_VERSION=${{ github.run_number }} -DCPACK_GENERATOR=${{ matrix.cpack_generator }}
+      
+      - name: Build project
+        run: cmake --build .
+      
+      - name: Run tests
+        run: cmake --build . --target test
+      
+      # Создание пакетов
+      - name: Create package
+        run: cmake --build . --target package
+      
+      # Поиск созданного пакета
+      - name: Find package file
+        id: find-package
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            PACKAGE_FILE=$(ls *.deb 2>/dev/null | head -n 1)
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            PACKAGE_FILE=$(ls *.exe 2>/dev/null | head -n 1)
+          fi
+          echo "PACKAGE_FILE=$PACKAGE_FILE" >> $GITHUB_OUTPUT
+          echo "Found package: $PACKAGE_FILE"
+      
+      # Загрузка артефактов
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.os }}-package
+          path: ${{ steps.find-package.outputs.PACKAGE_FILE }}
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      # Установка GitHub CLI
+      - name: Install GitHub CLI
+        run: |
+          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+      
+      # Скачивание артефактов
+      - name: Download artifacts
+        run: |
+          mkdir -p artifacts
+          gh run download ${{ github.run_id }} -n ubuntu-latest-package -D artifacts/
+          gh run download ${{ github.run_id }} -n windows-latest-package -D artifacts/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: List downloaded files
+        run: ls -la artifacts/
+      
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -29,13 +112,17 @@ jobs:
           release_name: Release ${{ github.run_number }}
           draft: false
           prerelease: false
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
+      
+      - name: Upload all assets
+        run: |
+          cd artifacts
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "Uploading $file to release ${{ github.run_number }}"
+              gh release upload ${{ github.run_number }} "$file" \
+                --repo ${{ github.repository }} \
+                --clobber
+            fi
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./helloworld-0.0.${{ github.run_number }}-Linux.deb
-          asset_name: helloworld-0.0.${{ github.run_number }}-Linux.deb
-          asset_content_type: application/vnd.debian.binary-package

@@ -41,7 +41,7 @@ jobs:
           asset_name: helloworld-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
 
-  # Новая сборка для Windows (только артефакты, без релиза)
+  # Исправленная сборка для Windows
   build-windows:
     runs-on: windows-latest
     steps:
@@ -49,27 +49,58 @@ jobs:
         with:
           submodules: true
       
-      # Установка зависимостей для Windows
+      # Установка зависимостей для Windows с указанием архитектуры
       - name: Install dependencies
         run: |
-          choco install boost -y
+          choco install boost-msvc-14.3 -y
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
       
-      # Настройка и сборка
+      # Настройка переменных окружения для Boost
+      - name: Set Boost environment variables
+        run: |
+          $boostPath = "C:\local\boost_1_85_0"
+          if (Test-Path $boostPath) {
+            echo "BOOST_ROOT=$boostPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            echo "BOOST_LIBRARYDIR=$boostPath\lib64-msvc-14.3" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            echo "BOOST_INCLUDEDIR=$boostPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+      
+      # Альтернативный вариант: использование vcpkg (более надежный)
+      - name: Setup vcpkg
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+          .\vcpkg\vcpkg install boost-test:x64-windows
+        shell: pwsh
+      
+      # Настройка CMake с указанием пути к Boost
       - name: Configure CMake
-        run: cmake . -DPATCH_VERSION=${{ github.run_number }}
+        run: |
+          cmake . `
+            -DPATCH_VERSION=${{ github.run_number }} `
+            -DBOOST_ROOT="C:/local/boost_1_85_0" `
+            -DBOOST_LIBRARYDIR="C:/local/boost_1_85_0/lib64-msvc-14.3" `
+            -DBOOST_INCLUDEDIR="C:/local/boost_1_85_0" `
+            -DBOOST_NO_SYSTEM_PATHS=ON `
+            -A x64
+        shell: pwsh
+      
+      # Или с использованием vcpkg
+      - name: Configure CMake with vcpkg
+        run: |
+          cmake . `
+            -DPATCH_VERSION=${{ github.run_number }} `
+            -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -A x64
+        shell: pwsh
       
       - name: Build project
-        run: cmake --build .
+        run: cmake --build . --config Release
+        shell: pwsh
       
       - name: Run tests
-        run: cmake --build . --target test
-      
-      # Создание пакета (если настроено в CMakeLists.txt)
-      - name: Create package
-        run: |
-          cmake --build . --target package || echo "Package target not available"
-          # Альтернативно: cpack -G ZIP
+        run: ctest -C Release --verbose
+        shell: pwsh
       
       # Загрузка исполняемых файлов как артефактов
       - name: Upload Windows artifacts
@@ -77,10 +108,10 @@ jobs:
         with:
           name: windows-build-${{ github.run_number }}
           path: |
-            *.exe
-            *.dll
-            *.zip
-            *.msi
-            *.nsis
+            **/*.exe
+            **/*.dll
+            **/Release/
+            **/*.pdb
           if-no-files-found: warn
           retention-days: 7
+        shell: pwsh

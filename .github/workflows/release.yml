@@ -6,7 +6,6 @@ on:
       - lab1
 
 jobs:
-  # Существующая рабочая сборка для Linux (не меняем)
   build-linux:
     runs-on: ubuntu-latest
     permissions:
@@ -15,21 +14,32 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+          fetch-depth: 0  # Важно: получаем всю историю коммитов для rev-list
+      
       - run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
-      - run: cmake . -DPATCH_VERSION=${{ github.run_number }}
+      - run: cmake .
       - run: cmake --build .
       - run: cmake --build . --target test
       - run: cmake --build . --target package
+      
+      # Получаем количество коммитов для имени пакета
+      - name: Get commit count
+        id: get_version
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+      
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.run_number }}
-          release_name: Release ${{ github.run_number }}
+          tag_name: v0.0.${{ steps.get_version.outputs.commit_count }}
+          release_name: Release v0.0.${{ steps.get_version.outputs.commit_count }}
           draft: false
           prerelease: false
+      
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
@@ -37,50 +47,50 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./helloworld-0.0.${{ github.run_number }}-Linux.deb
-          asset_name: helloworld-0.0.${{ github.run_number }}-Linux.deb
+          asset_path: ./helloworld-0.0.${{ steps.get_version.outputs.commit_count }}-Linux.deb
+          asset_name: helloworld-0.0.${{ steps.get_version.outputs.commit_count }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
 
-  # Сборка для Windows с тестами через vcpkg
   build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
+          fetch-depth: 0  # Важно: получаем всю историю коммитов
       
-      # Установка CMake
       - name: Install CMake
         run: choco install cmake -y
       
-      # Установка vcpkg и Boost
       - name: Setup vcpkg and Boost
         run: |
           git clone https://github.com/Microsoft/vcpkg.git
           .\vcpkg\bootstrap-vcpkg.bat
           .\vcpkg\vcpkg install boost-test:x64-windows
       
-      # Настройка CMake с vcpkg toolchain
       - name: Configure CMake
         run: |
           cmake . `
-            -DPATCH_VERSION=${{ github.run_number }} `
             -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -A x64
       
-      # Сборка проекта
       - name: Build project
         run: cmake --build . --config Release
       
-      # Запуск тестов
       - name: Run tests
         run: ctest -C Release --verbose
       
-      # Загрузка артефактов
+      # Для Windows тоже получаем версию для именования артефактов
+      - name: Get commit count for Windows
+        id: get_win_version
+        run: |
+          $commitCount = git rev-list --count HEAD
+          echo "commit_count=$commitCount" >> $env:GITHUB_OUTPUT
+      
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build-${{ github.run_number }}
+          name: windows-build-v0.0.${{ steps.get_win_version.outputs.commit_count }}
           path: |
             *.exe
             **/*.exe

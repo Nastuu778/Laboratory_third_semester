@@ -39,8 +39,8 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload Linux Release Asset
+        id: upload-linux-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,6 +52,8 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -87,39 +89,17 @@ jobs:
       - name: List build artifacts
         run: dir build -Recurse
 
-      - name: Copy required DLLs and create distribution
+      - name: Create Windows distribution package
         run: |
-          # Создаем папку для дистрибутива
-          New-Item -ItemType Directory -Path "dist" -Force
-          
-          # Копируем исполняемый файл (helloworld_cli.exe)
-          Copy-Item "build/Release/helloworld_cli.exe" -Destination "dist/" -ErrorAction SilentlyContinue
-          
-          # Копируем необходимые DLL из vcpkg
-          Copy-Item "vcpkg/installed/x64-windows/bin/*.dll" -Destination "dist/" -ErrorAction SilentlyContinue
-          
-          # Создаем bat файл для удобного запуска
-          Set-Content -Path "dist/run.bat" -Value "@echo off`r`necho Starting helloworld...`r`nhelloworld_cli.exe`r`necho.`r`necho Program finished. Press any key to exit...`r`npause >nul"
+          # Создаем ZIP архив с Windows версией
+          Compress-Archive -Path "build/Release/helloworld_cli.exe" -DestinationPath "helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip"
 
-      - name: Upload Windows executable with dependencies
-        uses: actions/upload-artifact@v4
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}
-          path: |
-            dist/helloworld_cli.exe
-            dist/*.dll
-            dist/run.bat
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Create zip package
-        run: |
-          Compress-Archive -Path "dist/*" -DestinationPath "helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip"
-
-      - name: Upload zip package
-        uses: actions/upload-artifact@v4
-        with:
-          name: helloworld-windows-package-v0.0.${{ steps.get_win_version.outputs.commit_count }}
-          path: helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip
-          if-no-files-found: error
-          retention-days: 7
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip
+          asset_name: helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip
+          asset_content_type: application/zip

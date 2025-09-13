@@ -62,20 +62,21 @@ jobs:
         run: |
           choco install cmake -y
           git clone https://github.com/Microsoft/vcpkg.git
-          .\vcpkg\bootstrap-vcpkg.bat
-          .\vcpkg\vcpkg install boost-test:x64-windows
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+          .\vcpkg install boost-test:x64-windows
 
       - name: Configure CMake
         run: |
-          cmake -B build `
-            -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake" `
-            -A x64
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake" -A x64
 
       - name: Build project
         run: cmake --build build --config Release
 
       - name: Run tests
-        run: ctest --test-dir build -C Release --verbose
+        run: |
+          cd build
+          ctest -C Release --verbose
 
       - name: Get commit count
         id: get_win_version
@@ -84,14 +85,41 @@ jobs:
           echo "commit_count=$commitCount" >> $env:GITHUB_OUTPUT
 
       - name: List build artifacts
-        run: dir build\Release /s
+        run: dir build -Recurse
 
-      - name: Upload Windows artifacts
+      - name: Copy required DLLs and create distribution
+        run: |
+          # Создаем папку для дистрибутива
+          New-Item -ItemType Directory -Path "dist" -Force
+          
+          # Копируем исполняемый файл (helloworld_cli.exe)
+          Copy-Item "build/Release/helloworld_cli.exe" -Destination "dist/" -ErrorAction SilentlyContinue
+          
+          # Копируем необходимые DLL из vcpkg
+          Copy-Item "vcpkg/installed/x64-windows/bin/*.dll" -Destination "dist/" -ErrorAction SilentlyContinue
+          
+          # Создаем bat файл для удобного запуска
+          Set-Content -Path "dist/run.bat" -Value "@echo off`r`necho Starting helloworld...`r`nhelloworld_cli.exe`r`necho.`r`necho Program finished. Press any key to exit...`r`npause >nul"
+
+      - name: Upload Windows executable with dependencies
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build-v0.0.${{ steps.get_win_version.outputs.commit_count }}
+          name: helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}
           path: |
-            build/Release/*.exe
-            build/Release/*.dll
+            dist/helloworld_cli.exe
+            dist/*.dll
+            dist/run.bat
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Create zip package
+        run: |
+          Compress-Archive -Path "dist/*" -DestinationPath "helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip"
+
+      - name: Upload zip package
+        uses: actions/upload-artifact@v4
+        with:
+          name: helloworld-windows-package-v0.0.${{ steps.get_win_version.outputs.commit_count }}
+          path: helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip
           if-no-files-found: error
           retention-days: 7

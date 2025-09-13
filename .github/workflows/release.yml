@@ -50,10 +50,19 @@ jobs:
           asset_name: helloworld-0.0.${{ steps.get_version.outputs.commit_count }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
 
+      - name: Save release info for Windows job
+        run: |
+          echo "UPLOAD_URL=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=${{ steps.get_version.outputs.commit_count }}" >> $GITHUB_ENV
+
   build-windows:
     runs-on: windows-latest
+    needs: build-linux  # Важно: зависит от Linux job
     permissions:
       contents: write
+    env:
+      UPLOAD_URL: ${{ needs.build-linux.outputs.upload_url }}
+      RELEASE_VERSION: ${{ needs.build-linux.outputs.commit_count }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -80,26 +89,20 @@ jobs:
           cd build
           ctest -C Release --verbose
 
-      - name: Get commit count
-        id: get_win_version
-        run: |
-          $commitCount = git rev-list --count HEAD
-          echo "commit_count=$commitCount" >> $env:GITHUB_OUTPUT
-
       - name: List build artifacts
         run: dir build -Recurse
 
       - name: Create Windows distribution package
         run: |
           # Создаем ZIP архив с Windows версией
-          Compress-Archive -Path "build/Release/helloworld_cli.exe" -DestinationPath "helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip"
+          Compress-Archive -Path "build/Release/helloworld_cli.exe" -DestinationPath "helloworld-windows-v0.0.$env:RELEASE_VERSION.zip"
 
       - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip
-          asset_name: helloworld-windows-v0.0.${{ steps.get_win_version.outputs.commit_count }}.zip
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: ./helloworld-windows-v0.0.${{ env.RELEASE_VERSION }}.zip
+          asset_name: helloworld-windows-v0.0.${{ env.RELEASE_VERSION }}.zip
           asset_content_type: application/zip

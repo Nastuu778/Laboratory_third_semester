@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_version: ${{ steps.get_version.outputs.commit_count }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -40,7 +43,6 @@ jobs:
           prerelease: false
 
       - name: Upload Linux Release Asset
-        id: upload-linux-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -50,19 +52,11 @@ jobs:
           asset_name: helloworld-0.0.${{ steps.get_version.outputs.commit_count }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
 
-      - name: Save release info for Windows job
-        run: |
-          echo "UPLOAD_URL=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_ENV
-          echo "RELEASE_VERSION=${{ steps.get_version.outputs.commit_count }}" >> $GITHUB_ENV
-
   build-windows:
     runs-on: windows-latest
-    needs: build-linux  # Важно: зависит от Linux job
+    needs: build-linux
     permissions:
       contents: write
-    env:
-      UPLOAD_URL: ${{ needs.build-linux.outputs.upload_url }}
-      RELEASE_VERSION: ${{ needs.build-linux.outputs.commit_count }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -89,20 +83,39 @@ jobs:
           cd build
           ctest -C Release --verbose
 
+      - name: Get commit count (for Windows)
+        id: get_win_version
+        run: |
+          $commitCount = git rev-list --count HEAD
+          echo "commit_count=$commitCount" >> $env:GITHUB_OUTPUT
+
       - name: List build artifacts
         run: dir build -Recurse
 
       - name: Create Windows distribution package
         run: |
           # Создаем ZIP архив с Windows версией
-          Compress-Archive -Path "build/Release/helloworld_cli.exe" -DestinationPath "helloworld-windows-v0.0.$env:RELEASE_VERSION.zip"
+          Compress-Archive -Path "build/Release/helloworld_cli.exe" -DestinationPath "helloworld-windows-v0.0.${{ needs.build-linux.outputs.release_version }}.zip"
 
-      - name: Upload Windows Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./helloworld-windows-v0.0.${{ env.RELEASE_VERSION }}.zip
-          asset_name: helloworld-windows-v0.0.${{ env.RELEASE_VERSION }}.zip
-          asset_content_type: application/zip
+      - name: Upload Windows Release Asset using API
+        run: |
+          $version = "${{ needs.build-linux.outputs.release_version }}"
+          $repo = "${{ github.repository }}"
+          $zipFile = "helloworld-windows-v0.0.$version.zip"
+          $assetName = "helloworld-windows-v0.0.$version.zip"
+          
+          $releaseUrl = "https://api.github.com/repos/$repo/releases/tags/v0.0.$version"
+          $headers = @{
+            Authorization = "token ${{ secrets.GITHUB_TOKEN }}"
+            Accept = "application/vnd.github.v3+json"
+          }
+          
+          $release = Invoke-RestMethod -Uri $releaseUrl -Headers $headers
+          $uploadUrl = $release.upload_url -replace '\{\?name,label\}', ''
+          
+          $uploadHeaders = @{
+            Authorization = "token ${{ secrets.GITHUB_TOKEN }}"
+            "Content-Type" = "application/zip"
+          }
+          
+          Invoke-RestMethod -Uri "$uploadUrl?name=$assetName" -Method Post -InFile $zipFile -Headers $uploadHeaders

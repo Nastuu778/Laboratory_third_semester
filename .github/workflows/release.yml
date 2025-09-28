@@ -81,7 +81,6 @@ jobs:
           asset_path: ./ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
           asset_name: ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
           asset_content_type: application/gzip
-
   build-windows:
     runs-on: windows-latest
     needs: create-release
@@ -90,13 +89,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup MSVC environment
-        uses: ilammy/msvc-dev-cmd@v1
-      
       - name: Install dependencies
         run: |
           choco install cmake -y
-          choco install ninja -y
 
       - name: Install vcpkg and dependencies
         run: |
@@ -112,18 +107,23 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release ..
+          cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..
           cmake --build . --config Release
+
+      - name: List build directory to debug
+        run: |
+          cd build
+          dir /s
 
       - name: Run tests
         run: |
-          cd build
-          .\Release\ip_filter_test.exe
+          cd build/Release
+          .\ip_filter_test.exe
 
       - name: Test main application
         run: |
-          cd build
-          echo "1.1.1.1	111	0`n2.2.2.2	222	0" | .\Release\ip_filter.exe
+          cd build/Release
+          echo "1.1.1.1	111	0`n2.2.2.2	222	0" | .\ip_filter.exe
 
       - name: Create Windows package
         run: |

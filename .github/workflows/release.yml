@@ -81,6 +81,7 @@ jobs:
           asset_path: ./ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
           asset_name: ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
           asset_content_type: application/gzip
+
   build-windows:
     runs-on: windows-latest
     needs: create-release
@@ -92,6 +93,7 @@ jobs:
       - name: Install dependencies
         run: |
           choco install cmake -y
+          choco install ninja -y
 
       - name: Install vcpkg and dependencies
         run: |
@@ -107,29 +109,50 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..
-          cmake --build . --config Release
+          cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..
+          cmake --build .
 
-      - name: List build directory to debug
+      - name: Debug - List all files in build directory
         run: |
           cd build
-          dir /s
+          echo "=== All files in build directory ==="
+          Get-ChildItem -Recurse
 
       - name: Run tests
         run: |
-          cd build/Release
-          .\ip_filter_test.exe
+          cd build
+          # Попробуем найти файл
+          if (Test-Path "ip_filter_test.exe") {
+            echo "Found ip_filter_test.exe in root"
+            .\ip_filter_test.exe
+          } elseif (Test-Path "Release/ip_filter_test.exe") {
+            echo "Found ip_filter_test.exe in Release folder"
+            .\Release\ip_filter_test.exe
+          } else {
+            echo "Could not find ip_filter_test.exe"
+            Get-ChildItem -Recurse -Filter "*test*"
+            exit 1
+          }
 
       - name: Test main application
         run: |
-          cd build/Release
-          echo "1.1.1.1	111	0`n2.2.2.2	222	0" | .\ip_filter.exe
+          cd build
+          if (Test-Path "ip_filter.exe") {
+            echo "1.1.1.1	111	0`n2.2.2.2	222	0" | .\ip_filter.exe
+          } elseif (Test-Path "Release/ip_filter.exe") {
+            echo "1.1.1.1	111	0`n2.2.2.2	222	0" | .\Release\ip_filter.exe
+          }
 
       - name: Create Windows package
         run: |
           mkdir package/windows -Force
-          Copy-Item "build/Release/ip_filter.exe" "package/windows/"
-          Copy-Item "build/Release/ip_filter_test.exe" "package/windows/"
+          if (Test-Path "build/ip_filter.exe") {
+            Copy-Item "build/ip_filter.exe" "package/windows/"
+            Copy-Item "build/ip_filter_test.exe" "package/windows/"
+          } elseif (Test-Path "build/Release/ip_filter.exe") {
+            Copy-Item "build/Release/ip_filter.exe" "package/windows/"
+            Copy-Item "build/Release/ip_filter_test.exe" "package/windows/"
+          }
           Compress-Archive -Path "package/windows/*" -DestinationPath "ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip"
 
       - name: Upload Windows Release Asset

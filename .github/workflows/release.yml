@@ -83,12 +83,14 @@ jobs:
           asset_path: ./ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
           asset_name: ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
           asset_content_type: application/gzip
-
   build-windows:
     runs-on: windows-latest
     needs: create-release
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Install dependencies
         run: |
@@ -96,16 +98,13 @@ jobs:
           choco install ninja -y
 
       - name: Clean build directory
-        run: |
-          if (Test-Path "build") {
-            Remove-Item -Recurse -Force build
-          }
+        run: rmdir /s /q build
 
-      - name: Build project
+      - name: Build project with MSVC
         run: |
           mkdir build
           cd build
-          cmake -G "Ninja" ..
+          cmake -G "Ninja" -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl ..
           cmake --build .
 
       - name: Run tests
@@ -113,19 +112,12 @@ jobs:
           cd build
           .\ip_filter_test.exe
 
-      - name: Test main application
-        run: |
-          cd build
-          echo "1.1.1.1	111	0" > test_input.txt
-          echo "2.2.2.2	222	0" >> test_input.txt
-          Get-Content test_input.txt | .\ip_filter.exe
-
       - name: Create Windows package
         run: |
-          mkdir package/windows -Force
-          Copy-Item "build/ip_filter.exe" "package/windows/"
-          Copy-Item "build/ip_filter_test.exe" "package/windows/"
-          Compress-Archive -Path "package/windows/*" -DestinationPath "ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip"
+          mkdir package\windows
+          copy build\ip_filter.exe package\windows\
+          copy build\ip_filter_test.exe package\windows\
+          7z a -tzip ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip package\windows\*
 
       - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1

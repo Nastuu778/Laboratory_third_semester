@@ -3,10 +3,8 @@ project(IPFilter)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Настройка компилятора
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
-endif()
+# Явно указываем выходную директорию
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # Основная программа
 add_executable(ip_filter 
@@ -14,7 +12,7 @@ add_executable(ip_filter
     ip_filter.cpp
 )
 
-# Поиск GTest
+# Поиск GTest с разными вариантами
 find_package(GTest QUIET)
 
 if(GTEST_FOUND)
@@ -25,12 +23,29 @@ if(GTEST_FOUND)
     )
     target_link_libraries(ip_filter_test GTest::GTest GTest::Main)
     
-    # Добавление тестов
     include(GoogleTest)
     gtest_discover_tests(ip_filter_test)
 else()
     message(WARNING "GTest not found, tests will not be built")
+    
+    # Альтернативный поиск в стандартных путях Windows
+    find_path(GTEST_INCLUDE_DIR gtest/gtest.h
+        PATHS "C:/gtest/include"
+    )
+    find_library(GTEST_LIBRARY
+        NAMES gtest
+        PATHS "C:/gtest/lib"
+    )
+    
+    if(GTEST_INCLUDE_DIR AND GTEST_LIBRARY)
+        message(STATUS "GTest found via manual search")
+        add_executable(ip_filter_test 
+            test.cpp 
+            ip_filter.cpp
+        )
+        target_include_directories(ip_filter_test PRIVATE ${GTEST_INCLUDE_DIR})
+        target_link_libraries(ip_filter_test ${GTEST_LIBRARY})
+    else()
+        message(STATUS "GTest not available - skipping tests")
+    endif()
 endif()
-
-# Установочные цели
-install(TARGETS ip_filter DESTINATION bin)

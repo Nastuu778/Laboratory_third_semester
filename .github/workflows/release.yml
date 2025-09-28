@@ -94,40 +94,14 @@ jobs:
         run: |
           choco install cmake -y
           choco install mingw -y
-          # Устанавливаем GTest для Windows
-          choco install gtest -y
 
-      - name: Build GTest manually (если через choco не работает)
+      - name: Build project (without tests)
         run: |
-          # Альтернативный способ установки GTest
-          git clone https://github.com/google/googletest.git
-          cd googletest
           mkdir build
           cd build
+          # Собираем только основную программу, игнорируя тесты
           cmake -G "MinGW Makefiles" ..
-          cmake --build .
-          cmake --install . --prefix C:/gtest
-
-      - name: Build project with GTest
-        run: |
-          mkdir build
-          cd build
-          # Пробуем с GTest
-          cmake -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH="C:/gtest" ..
-          cmake --build .
-
-      - name: List build artifacts (debug)
-        run: dir build -Recurse
-
-      - name: Run tests (if available)
-        run: |
-          cd build
-          if (Test-Path "ip_filter_test.exe") { 
-            echo "Running tests..."
-            .\ip_filter_test.exe 
-          } else {
-            echo "Tests not built - skipping test execution"
-          }
+          cmake --build . --target ip_filter
 
       - name: Test main application
         run: |
@@ -138,9 +112,10 @@ jobs:
         run: |
           mkdir package/windows -Force
           Copy-Item "build/ip_filter.exe" "package/windows/"
-          if (Test-Path "build/ip_filter_test.exe") {
-            Copy-Item "build/ip_filter_test.exe" "package/windows/"
-          }
+          # Добавляем README с пояснением
+          echo "IP Filter Application for Windows" > package/windows/README.txt
+          echo "Run: ip_filter.exe < input_file.tsv" >> package/windows/README.txt
+          echo "Tests are available in Linux build" >> package/windows/README.txt
           Compress-Archive -Path "package/windows/*" -DestinationPath "ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip"
 
       - name: Upload Windows Release Asset

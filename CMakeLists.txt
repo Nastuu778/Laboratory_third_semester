@@ -5,6 +5,13 @@ project(ip_filter)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Статическая линковка для MinGW
+if(MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS "-static")
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    set(BUILD_SHARED_LIBS OFF)
+endif()
+
 # Включение FetchContent
 include(FetchContent)
 
@@ -15,10 +22,9 @@ FetchContent_Declare(
   GIT_TAG release-1.12.1
 )
 
-# Для Windows важно установить этот флаг
-if(WIN32)
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-endif()
+# Для статической линковки GTest
+set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF)
 
 # Скачивание и создание целей googletest
 FetchContent_MakeAvailable(googletest)

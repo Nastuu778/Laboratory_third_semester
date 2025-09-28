@@ -90,18 +90,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          vcpkgGitCommitId: '2024.04.12'
+
       - name: Install dependencies
         run: |
           choco install cmake -y
-          choco install mingw -y
+          choco install ninja -y
 
-      - name: Build project (without tests)
+      - name: Build project with vcpkg
         run: |
           mkdir build
           cd build
-          # Собираем только основную программу, игнорируя тесты
-          cmake -G "MinGW Makefiles" ..
-          cmake --build . --target ip_filter
+          cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" ..
+          cmake --build .
+
+      - name: Run tests
+        run: |
+          cd build
+          .\ip_filter_test.exe
 
       - name: Test main application
         run: |
@@ -112,10 +122,7 @@ jobs:
         run: |
           mkdir package/windows -Force
           Copy-Item "build/ip_filter.exe" "package/windows/"
-          # Добавляем README с пояснением
-          echo "IP Filter Application for Windows" > package/windows/README.txt
-          echo "Run: ip_filter.exe < input_file.tsv" >> package/windows/README.txt
-          echo "Tests are available in Linux build" >> package/windows/README.txt
+          Copy-Item "build/ip_filter_test.exe" "package/windows/"
           Compress-Archive -Path "package/windows/*" -DestinationPath "ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip"
 
       - name: Upload Windows Release Asset

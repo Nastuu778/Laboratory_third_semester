@@ -12,20 +12,17 @@ add_executable(ip_filter
     ip_filter.cpp
 )
 
-# Поиск GTest - только если доступен
-find_package(GTest QUIET)
+# Поиск GTest через find_package (vcpkg обеспечивает правильное нахождение)
+find_package(GTest REQUIRED)
 
-if(GTEST_FOUND)
-    message(STATUS "GTest found, building tests")
-    add_executable(ip_filter_test 
-        test.cpp 
-        ip_filter.cpp
-    )
-    target_link_libraries(ip_filter_test GTest::GTest GTest::Main)
-    
-    include(GoogleTest)
-    gtest_discover_tests(ip_filter_test)
-else()
-    message(STATUS "GTest not found - building without tests")
-    # Не создаем цель для тестов
-endif()
+message(STATUS "GTest found, building tests")
+
+add_executable(ip_filter_test 
+    test.cpp 
+    ip_filter.cpp
+)
+
+target_link_libraries(ip_filter_test GTest::gtest GTest::gtest_main)
+
+include(GoogleTest)
+gtest_discover_tests(ip_filter_test)

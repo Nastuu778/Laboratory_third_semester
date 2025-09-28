@@ -1,0 +1,133 @@
+name: 'C++ CI'
+
+on:
+  push:
+    branches:
+      - lab2
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_version: ${{ steps.get_version.outputs.commit_count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get commit count
+        id: get_version
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v0.0.${{ steps.get_version.outputs.commit_count }}
+          release_name: Release v0.0.${{ steps.get_version.outputs.commit_count }}
+          draft: false
+          prerelease: false
+
+  build-linux:
+    runs-on: ubuntu-latest
+    needs: create-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libgtest-dev build-essential
+
+      - name: Build project
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make
+
+      - name: Run tests
+        run: |
+          cd build
+          ./ip_filter_test
+
+      - name: Test main application
+        run: |
+          cd build
+          echo -e "1.1.1.1\t111\t0\n2.2.2.2\t222\t0" | ./ip_filter
+
+      - name: Create Linux package
+        run: |
+          mkdir -p package/linux
+          cp build/ip_filter package/linux/
+          cp build/ip_filter_test package/linux/
+          tar -czf ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz -C package/linux .
+
+      - name: Upload Linux Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
+          asset_name: ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
+          asset_content_type: application/gzip
+
+  build-windows:
+    runs-on: windows-latest
+    needs: create-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          choco install cmake -y
+          choco install mingw -y
+
+      - name: Build project
+        run: |
+          mkdir build
+          cd build
+          cmake -G "MinGW Makefiles" ..
+          cmake --build .
+
+      - name: Run tests
+        run: |
+          cd build
+          .\ip_filter_test.exe
+
+      - name: Test main application
+        run: |
+          cd build
+          echo "1.1.1.1	111	0\n2.2.2.2	222	0" | .\ip_filter.exe
+
+      - name: List build artifacts
+        run: dir build -Recurse
+
+      - name: Create Windows package
+        run: |
+          mkdir package/windows -Force
+          Copy-Item "build/ip_filter.exe" "package/windows/"
+          Copy-Item "build/ip_filter_test.exe" "package/windows/"
+          Compress-Archive -Path "package/windows/*" -DestinationPath "ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip"
+
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
+          asset_name: ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
+          asset_content_type: application/zip

@@ -90,22 +90,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-          vcpkgGitCommitId: '2024.04.12'
-
       - name: Install dependencies
         run: |
           choco install cmake -y
           choco install ninja -y
+          choco install git -y
+
+      - name: Install vcpkg and GTest
+        run: |
+          # Клонируем vcpkg
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+          .\vcpkg integrate install
+          # Устанавливаем GTest
+          .\vcpkg install gtest
 
       - name: Build project with vcpkg
         run: |
           mkdir build
           cd build
-          cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" ..
+          cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..
           cmake --build .
 
       - name: Run tests

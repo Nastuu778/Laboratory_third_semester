@@ -5,6 +5,9 @@ on:
     branches:
       - lab2
 
+permissions:
+  contents: write
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
@@ -90,38 +93,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Remove MinGW from PATH to avoid conflicts
-        run: |
-          $env:Path = ($env:Path -split ';' | Where-Object { $_ -notmatch 'mingw' }) -join ';'
-          echo "Updated PATH: $env:Path"
-
       - name: Install dependencies
         run: |
           choco install cmake -y
           choco install ninja -y
 
-      - name: Install vcpkg and dependencies
+      - name: Clean build directory
         run: |
-          git clone https://github.com/Microsoft/vcpkg.git
-          cd vcpkg
-          .\bootstrap-vcpkg.bat
-          if (!(Test-Path ..\vcpkg.json)) {
-            echo '{"dependencies": ["gtest"]}' | Out-File -FilePath ..\vcpkg.json -Encoding utf8
+          if (Test-Path "build") {
+            Remove-Item -Recurse -Force build
           }
-          .\vcpkg install
 
-      - name: Build project with vcpkg
+      - name: Build project
         run: |
           mkdir build
           cd build
-          cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl ..
+          cmake -G "Ninja" ..
           cmake --build .
-
-      - name: Debug - List all files in build directory
-        run: |
-          cd build
-          echo "=== All files in build directory ==="
-          Get-ChildItem -Recurse
 
       - name: Run tests
         run: |

@@ -39,3 +39,17 @@ target_link_libraries(ip_filter_test PRIVATE gtest_main)
 # Включение тестирования
 enable_testing()
 add_test(NAME ip_filter_test COMMAND ip_filter_test)
+
+# Добавьте информацию о версии
+set(PROJECT_VERSION 1.0.0)
+set(PROJECT_DESCRIPTION "IP Filter - Laboratory Work")
+
+# Для Windows добавьте информацию о версии в .exe
+if(WIN32)
+    set(CMAKE_RC_FLAGS "-DCMAKE_RC_FLAGS=-DGIT_VERSION=\\\"${PROJECT_VERSION}\\\"")
+    include(GenerateExportHeader)
+    
+    # Информация о версии для .exe
+    set(VERSION_INFO "1.0.0.0")
+    configure_file(version_info.rc.in version_info.rc @ONLY)
+endif()

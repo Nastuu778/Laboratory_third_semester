@@ -95,7 +95,7 @@ jobs:
           choco install cmake -y
           choco install ninja -y
           choco install git -y
-
+          
       - name: Install vcpkg and GTest
         run: |
           # Клонируем vcpkg
@@ -103,8 +103,8 @@ jobs:
           cd vcpkg
           .\bootstrap-vcpkg.bat
           .\vcpkg integrate install
-          # Устанавливаем GTest
-          .\vcpkg install gtest
+          # Устанавливаем GTest в классическом режиме (без манифеста)
+          .\vcpkg install gtest --triplet x64-windows
 
       - name: Build project with vcpkg
         run: |

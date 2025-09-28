@@ -11,8 +11,6 @@ permissions:
 jobs:
   create-release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_version: ${{ steps.get_version.outputs.commit_count }}
@@ -41,15 +39,16 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     needs: create-release
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake g++ libgtest-dev build-essential
+          sudo apt-get install -y cmake g++ build-essential
+
+      - name: Clean build directory
+        run: rm -rf build
 
       - name: Build project
         run: |
@@ -88,8 +87,6 @@ jobs:
   build-windows:
     runs-on: windows-latest
     needs: create-release
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -119,7 +116,9 @@ jobs:
       - name: Test main application
         run: |
           cd build
-          echo "1.1.1.1	111	0`n2.2.2.2	222	0" | .\ip_filter.exe
+          echo "1.1.1.1	111	0" > test_input.txt
+          echo "2.2.2.2	222	0" >> test_input.txt
+          Get-Content test_input.txt | .\ip_filter.exe
 
       - name: Create Windows package
         run: |

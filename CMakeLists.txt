@@ -1,28 +1,35 @@
-cmake_minimum_required(VERSION 3.10)
-project(IPFilter)
+cmake_minimum_required(VERSION 3.14)
+project(ip_filter)
 
-set(CMAKE_CXX_STANDARD 17)
+# Настройка стандарта C++
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Явно указываем выходную директорию
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+# Включение FetchContent
+include(FetchContent)
 
-# Основная программа
-add_executable(ip_filter 
-    main.cpp 
-    ip_filter.cpp
+# Загрузка и настройка Google Test
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG release-1.12.1
 )
 
-# Поиск GTest через find_package (vcpkg обеспечивает правильное нахождение)
-find_package(GTest REQUIRED)
+# Для Windows важно установить этот флаг
+if(WIN32)
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+endif()
 
-message(STATUS "GTest found, building tests")
+# Скачивание и создание целей googletest
+FetchContent_MakeAvailable(googletest)
 
-add_executable(ip_filter_test 
-    test.cpp 
-    ip_filter.cpp
-)
+# Ваши исполняемые файлы
+add_executable(ip_filter main.cpp ip_filter.cpp)
+add_executable(ip_filter_test test.cpp ip_filter.cpp)
 
-target_link_libraries(ip_filter_test GTest::gtest GTest::gtest_main)
+# Линковка с Google Test
+target_link_libraries(ip_filter_test PRIVATE gtest_main)
 
-include(GoogleTest)
-gtest_discover_tests(ip_filter_test)
+# Включение тестирования
+enable_testing()
+add_test(NAME ip_filter_test COMMAND ip_filter_test)

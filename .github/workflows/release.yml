@@ -90,51 +90,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+      
       - name: Install dependencies
         run: |
           choco install cmake -y
           choco install ninja -y
-          choco install git -y
-          
+
       - name: Install vcpkg and dependencies
         run: |
-          # Клонируем vcpkg
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
           .\bootstrap-vcpkg.bat
-          .\vcpkg integrate install
-          
-          # Если у вас есть vcpkg.json, используем manifest mode
-          # Если нет - создаем базовый vcpkg.json с gtest
           if (!(Test-Path ..\vcpkg.json)) {
             echo '{"dependencies": ["gtest"]}' | Out-File -FilePath ..\vcpkg.json -Encoding utf8
           }
-          
-          # Устанавливаем зависимости через manifest mode
           .\vcpkg install
 
       - name: Build project with vcpkg
         run: |
           mkdir build
           cd build
-          cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..
-          cmake --build .
+          cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --config Release
 
       - name: Run tests
         run: |
           cd build
-          .\ip_filter_test.exe
+          .\Release\ip_filter_test.exe
 
       - name: Test main application
         run: |
           cd build
-          echo "1.1.1.1	111	0`n2.2.2.2	222	0" | .\ip_filter.exe
+          echo "1.1.1.1	111	0`n2.2.2.2	222	0" | .\Release\ip_filter.exe
 
       - name: Create Windows package
         run: |
           mkdir package/windows -Force
-          Copy-Item "build/ip_filter.exe" "package/windows/"
-          Copy-Item "build/ip_filter_test.exe" "package/windows/"
+          Copy-Item "build/Release/ip_filter.exe" "package/windows/"
+          Copy-Item "build/Release/ip_filter_test.exe" "package/windows/"
           Compress-Archive -Path "package/windows/*" -DestinationPath "ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip"
 
       - name: Upload Windows Release Asset

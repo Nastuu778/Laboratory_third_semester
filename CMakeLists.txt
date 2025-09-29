@@ -1,55 +1,40 @@
 cmake_minimum_required(VERSION 3.14)
-project(ip_filter)
+project(ip_filter VERSION 1.0.0)
 
 # Настройка стандарта C++
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Статическая линковка для MinGW
-if(MINGW)
-    set(CMAKE_EXE_LINKER_FLAGS "-static")
-    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-    set(BUILD_SHARED_LIBS OFF)
-endif()
+# Создаем библиотеку из общих исходных файлов
+add_library(ip_filter_lib STATIC ip_filter.cpp)
+target_include_directories(ip_filter_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Включение FetchContent
-include(FetchContent)
+# Основное приложение
+add_executable(ip_filter main.cpp)
+target_link_libraries(ip_filter PRIVATE ip_filter_lib)
 
-# Загрузка и настройка Google Test
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG release-1.12.1
-)
+# Добавляем поддиректорию с тестами
+add_subdirectory(gtest_tests)
 
-# Для статической линковки GTest
-set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
-set(BUILD_SHARED_LIBS OFF)
+# Настройка CPack
+set(CPACK_PACKAGE_NAME "ip_filter")
+set(CPACK_PACKAGE_VENDOR "Your Name")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "IP Filter Application")
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 
-# Скачивание и создание целей googletest
-FetchContent_MakeAvailable(googletest)
-
-# Ваши исполняемые файлы
-add_executable(ip_filter main.cpp ip_filter.cpp)
-add_executable(ip_filter_test test.cpp ip_filter.cpp)
-
-# Линковка с Google Test
-target_link_libraries(ip_filter_test PRIVATE gtest_main)
-
-# Включение тестирования
-enable_testing()
-add_test(NAME ip_filter_test COMMAND ip_filter_test)
-
-# Добавьте информацию о версии
-set(PROJECT_VERSION 1.0.0)
-set(PROJECT_DESCRIPTION "IP Filter - Laboratory Work")
-
-# Для Windows добавьте информацию о версии в .exe
 if(WIN32)
-    set(CMAKE_RC_FLAGS "-DCMAKE_RC_FLAGS=-DGIT_VERSION=\\\"${PROJECT_VERSION}\\\"")
-    include(GenerateExportHeader)
-    
-    # Информация о версии для .exe
-    set(VERSION_INFO "1.0.0.0")
-    configure_file(version_info.rc.in version_info.rc @ONLY)
+    set(CPACK_GENERATOR "ZIP")
+    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-windows")
+else()
+    set(CPACK_GENERATOR "TGZ")
+    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-linux")
 endif()
+
+include(CPack)
+
+# Установка файлов для пакета
+install(TARGETS ip_filter
+    RUNTIME DESTINATION bin
+)

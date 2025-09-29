@@ -13,17 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
-      release_version: ${{ steps.get_version.outputs.commit_count }}
+      release_version: ${{ steps.get_version.outputs.release_version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get commit count
+      - name: Get version from CMake
         id: get_version
         run: |
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+          VERSION=$(grep "project(ip_filter VERSION" CMakeLists.txt | sed -E 's/.*VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          echo "release_version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release
@@ -31,8 +31,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v0.0.${{ steps.get_version.outputs.commit_count }}
-          release_name: Release v0.0.${{ steps.get_version.outputs.commit_count }}
+          tag_name: v${{ steps.get_version.outputs.release_version }}
+          release_name: Release v${{ steps.get_version.outputs.release_version }}
           draft: false
           prerelease: false
 
@@ -47,32 +47,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake g++ build-essential
 
-      - name: Clean build directory
-        run: rm -rf build
-
       - name: Build project
         run: |
           mkdir build
           cd build
           cmake ..
           make
+          cpack
 
       - name: Run tests
         run: |
           cd build
-          ./ip_filter_test
+          ./gtest_tests/ip_filter_tests
 
       - name: Test main application
         run: |
           cd build
           echo -e "1.1.1.1\t111\t0\n2.2.2.2\t222\t0" | ./ip_filter
-
-      - name: Create Linux package
-        run: |
-          mkdir -p package/linux
-          cp build/ip_filter package/linux/
-          cp build/ip_filter_test package/linux/
-          tar -czf ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz -C package/linux .
 
       - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
@@ -80,8 +71,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
-          asset_name: ip_filter-linux-v0.0.${{ needs.create-release.outputs.release_version }}.tar.gz
+          asset_path: ./build/ip_filter-1.0.0-linux.tar.gz
+          asset_name: ip_filter-linux-v${{ needs.create-release.outputs.release_version }}.tar.gz
           asset_content_type: application/gzip
 
   build-windows:
@@ -95,23 +86,18 @@ jobs:
           choco install cmake -y
           choco install ninja -y
 
-      - name: Clean build directory
-        run: |
-          if (Test-Path "build") {
-            Remove-Item -Recurse -Force build
-          }
-
       - name: Build project
         run: |
           mkdir build
           cd build
           cmake -G "Ninja" ..
           cmake --build .
+          cpack
 
       - name: Run tests
         run: |
           cd build
-          .\ip_filter_test.exe
+          .\gtest_tests\ip_filter_tests.exe
 
       - name: Test main application
         run: |
@@ -120,19 +106,12 @@ jobs:
           echo "2.2.2.2	222	0" >> test_input.txt
           Get-Content test_input.txt | .\ip_filter.exe
 
-      - name: Create Windows package
-        run: |
-          mkdir package/windows -Force
-          Copy-Item "build/ip_filter.exe" "package/windows/"
-          Copy-Item "build/ip_filter_test.exe" "package/windows/"
-          Compress-Archive -Path "package/windows/*" -DestinationPath "ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip"
-
       - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
-          asset_name: ip_filter-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
+          asset_path: ./build/ip_filter-1.0.0-windows.zip
+          asset_name: ip_filter-windows-v${{ needs.create-release.outputs.release_version }}.zip
           asset_content_type: application/zip

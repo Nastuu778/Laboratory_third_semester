@@ -94,7 +94,7 @@ void print_filtered_ips(const std::vector<IPAddress> &ips, const IPFilter &filte
     {
         if (filter(ip))
         {
-            print_ip(ip);
+            print_ip(ip); //)))
         }
     }
 }

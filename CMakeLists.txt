@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(ip_filter VERSION 1.0.1)
-
-# Настройка стандарта C++
+project(ip_filter VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

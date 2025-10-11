@@ -41,18 +41,21 @@ set_target_properties(containers_demo PROPERTIES
 # Include directories
 target_include_directories(containers_demo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# === ДОБАВЛЕНО ДЛЯ CI/CD ===
-# Минимальная конфигурация CPack
+# Настройка CPack для создания пакетов
 set(CPACK_PACKAGE_NAME "ContainersDemo")
-set(CPACK_PACKAGE_VERSION "${ContainersDemo_VERSION}")
-set(CPACK_PACKAGE_VENDOR "Your Name")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Custom C++ containers demonstration")
+set(CPACK_PACKAGE_VENDOR "YourName")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Custom containers implementation - Vector, DoublyLinkedList, SinglyLinkedList")
+set(CPACK_PACKAGE_VERSION_MAJOR "1")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "ContainersDemo")
 
-# Для DEB пакетов (Linux)
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <email@example.com>")
-set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+# Для DEB пакетов
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "")
 
-# Для ZIP пакетов (Windows)
+# Для Windows
 set(CPACK_NSIS_DISPLAY_NAME "Containers Demo")
+set(CPACK_NSIS_PACKAGE_NAME "ContainersDemo")
 
 include(CPack)

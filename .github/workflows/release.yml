@@ -72,7 +72,7 @@ jobs:
           Architecture: amd64
           Maintainer: Your Name <your.email@example.com>
           Description: Custom containers demonstration project
-          Demonstration of Vector, DoublyLinkedList and SinglyLinkedList implementations
+            Demonstration of Vector, DoublyLinkedList and SinglyLinkedList implementations
           EOF
 
       - name: Build DEB package
@@ -124,52 +124,13 @@ jobs:
           asset_name: containers-demo-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
           asset_content_type: application/zip
 
-  build-macos:
-    runs-on: macos-latest
-    needs: create-release
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install dependencies
-        run: brew install cmake
-
-      - name: Configure CMake
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build project
-        run: cmake --build build --config Release
-
-      - name: Run tests
-        run: |
-          cd build
-          ./containers_demo
-
-      - name: Create macOS distribution package
-        run: |
-          mkdir -p ContainersDemo.app/Contents/MacOS
-          cp build/containers_demo ContainersDemo.app/Contents/MacOS/
-          zip -r containers-demo-macos-v0.0.${{ needs.create-release.outputs.release_version }}.zip ContainersDemo.app
-
-      - name: Upload macOS Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./containers-demo-macos-v0.0.${{ needs.create-release.outputs.release_version }}.zip
-          asset_name: containers-demo-macos-v0.0.${{ needs.create-release.outputs.release_version }}.zip
-          asset_content_type: application/zip
-
   test-results:
     runs-on: ubuntu-latest
-    needs: [build-linux, build-windows, build-macos]
+    needs: [build-linux, build-windows]
     steps:
       - name: Test Results Summary
         run: |
           echo "All builds completed successfully!"
           echo "Linux: DEB package created"
-          echo "Windows: EXE package created" 
-          echo "macOS: APP package created"
+          echo "Windows: EXE package created"
           echo "Release: v0.0.${{ needs.create-release.outputs.release_version }}"

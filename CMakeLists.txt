@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(ContainersDemo)
+project(ContainersDemo VERSION 1.0.0)  # Добавили версию
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -38,11 +38,21 @@ set_target_properties(containers_demo PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
-# Installation instructions for packaging
-install(TARGETS containers_demo
-    RUNTIME DESTINATION bin
-    COMPONENT runtime
-)
-
 # Include directories
 target_include_directories(containers_demo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# === ДОБАВЛЕНО ДЛЯ CI/CD ===
+# Минимальная конфигурация CPack
+set(CPACK_PACKAGE_NAME "ContainersDemo")
+set(CPACK_PACKAGE_VERSION "${ContainersDemo_VERSION}")
+set(CPACK_PACKAGE_VENDOR "Your Name")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Custom C++ containers demonstration")
+
+# Для DEB пакетов (Linux)
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <email@example.com>")
+set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+
+# Для ZIP пакетов (Windows)
+set(CPACK_NSIS_DISPLAY_NAME "Containers Demo")
+
+include(CPack)

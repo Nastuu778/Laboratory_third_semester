@@ -1,152 +1,127 @@
-name: CI/CD Build and Release
+name: 'C++ CI'
 
 on:
   push:
-    branches: [ main, master ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_version: ${{ steps.get_version.outputs.release_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from CMake
+        id: get_version
+        run: |
+          VERSION=$(grep "project(ContainersDemo VERSION" CMakeLists.txt | sed -E 's/.*VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          if [ -z "$VERSION" ]; then
+            VERSION="1.0.0"
+          fi
+          echo "release_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.release_version }}
+          release_name: Release v${{ steps.get_version.outputs.release_version }}
+          draft: false
+          prerelease: false
+
   build-linux:
     runs-on: ubuntu-latest
-    
+    needs: create-release
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake dpkg-dev debhelper
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ build-essential
 
-    - name: Configure and Build
-      run: |
-        mkdir -p build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Release ..
-        cmake --build . --config Release
+      - name: Build project
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make
 
-    - name: Run tests
-      run: |
-        cd build
-        ./containers_demo
+      - name: Run tests
+        run: |
+          cd build
+          ./containers_demo
 
-    - name: Create DEB package structure
-      run: |
-        mkdir -p packages/containers-demo_1.0.0_amd64/usr/local/bin
-        mkdir -p packages/containers-demo_1.0.0_amd64/usr/share/doc/containers-demo
-        mkdir -p packages/containers-demo_1.0.0_amd64/DEBIAN
-        
-        # Copy binary
-        cp build/containers_demo packages/containers-demo_1.0.0_amd64/usr/local/bin/
-        chmod +x packages/containers-demo_1.0.0_amd64/usr/local/bin/containers_demo
-        
-        # Create control file
-        cat > packages/containers-demo_1.0.0_amd64/DEBIAN/control << EOF
-        Package: containers-demo
-        Version: 1.0.0
-        Section: utils
-        Priority: optional
-        Architecture: amd64
-        Maintainer: Your Name <your.email@example.com>
-        Description: Demonstration of custom containers (Vector, LinkedList)
-         This package contains a demonstration program showing
-         the implementation of custom containers in C++.
-        EOF
-        
-        # Create copyright file
-        cat > packages/containers-demo_1.0.0_amd64/usr/share/doc/containers-demo/copyright << EOF
-        Copyright 2024 Your Name
-        License: MIT
-        EOF
-        
-        # Create changelog
-        cat > packages/containers-demo_1.0.0_amd64/usr/share/doc/containers-demo/changelog.Debian << EOF
-        containers-demo (1.0.0) stable; urgency=medium
-        
-          * Initial release
-          * Contains Vector, DoublyLinkedList, and SinglyLinkedList implementations
-        
-         -- Your Name <your.email@example.com>  $(date -R)
-        EOF
-        gzip -9n packages/containers-demo_1.0.0_amd64/usr/share/doc/containers-demo/changelog.Debian
+      - name: Create DEB package with CPack
+        run: |
+          cd build
+          cpack -G DEB
 
-    - name: Build DEB package
-      run: |
-        dpkg-deb --build packages/containers-demo_1.0.0_amd64
-        mv packages/containers-demo_1.0.0_amd64.deb containers-demo_1.0.0_amd64.deb
-
-    - name: Upload DEB package artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: containers-demo-linux
-        path: containers-demo_1.0.0_amd64.deb
+      - name: Upload Linux Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./build/ContainersDemo-${{ needs.create-release.outputs.release_version }}-Linux.deb
+          asset_name: containers-demo-linux-v${{ needs.create-release.outputs.release_version }}.deb
+          asset_content_type: application/vnd.debian.binary-package
 
   build-windows:
     runs-on: windows-latest
-    
+    needs: create-release
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Configure and Build
-      run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
-        cmake --build build --config Release
+      - name: Install dependencies
+        run: |
+          choco install cmake -y
+          choco install ninja -y
 
-    - name: Run tests
-      run: |
-        .\build\Release\containers_demo.exe
+      - name: Build project
+        run: |
+          mkdir build
+          cd build
+          cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build .
 
-    - name: Create Windows distribution
-      run: |
-        mkdir dist_windows
-        copy build\Release\containers_demo.exe dist_windows\
-        # Create a simple batch file to run the program
-        echo @echo off > dist_windows\run_containers_demo.bat
-        echo containers_demo.exe >> dist_windows\run_containers_demo.bat
-        echo pause >> dist_windows\run_containers_demo.bat
+      - name: Run tests
+        run: |
+          cd build
+          .\containers_demo.exe
 
-    - name: Create ZIP package
-      run: |
-        Compress-Archive -Path dist_windows\* -DestinationPath containers-demo-windows.zip
+      - name: Create Windows package with CPack
+        run: |
+          cd build
+          cpack -G ZIP
 
-    - name: Upload Windows artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: containers-demo-windows
-        path: |
-          containers-demo-windows.zip
-          build/Release/containers_demo.exe
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./build/ContainersDemo-${{ needs.create-release.outputs.release_version }}-win64.zip
+          asset_name: containers-demo-windows-v${{ needs.create-release.outputs.release_version }}.zip
+          asset_content_type: application/zip
 
-  create-release:
-    needs: [build-linux, build-windows]
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    
-    steps:
-    - name: Download Linux artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: containers-demo-linux
-
-    - name: Download Windows artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: containers-demo-windows
-
-    - name: Display structure of downloaded files
-      run: ls -la
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          containers-demo_1.0.0_amd64.deb
-          containers-demo-windows.zip
-          containers_demo.exe
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Windows EXE
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./build/containers_demo.exe
+          asset_name: containers_demo-v${{ needs.create-release.outputs.release_version }}.exe
+          asset_content_type: application/vnd.microsoft.portable-executable

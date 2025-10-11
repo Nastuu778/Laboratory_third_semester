@@ -1,38 +1,48 @@
-cmake_minimum_required(VERSION 3.14)
-project(ip_filter VERSION 1.0.2)
-set(CMAKE_CXX_STANDARD 11)
+cmake_minimum_required(VERSION 3.15)
+project(ContainersDemo)
+
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Создаем библиотеку из общих исходных файлов
-add_library(ip_filter_lib STATIC ip_filter.cpp)
-target_include_directories(ip_filter_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-# Основное приложение
-add_executable(ip_filter main.cpp)
-target_link_libraries(ip_filter PRIVATE ip_filter_lib)
-
-# Добавляем поддиректорию с тестами
-add_subdirectory(gtest_tests)
-
-# Настройка CPack
-set(CPACK_PACKAGE_NAME "ip_filter")
-set(CPACK_PACKAGE_VENDOR "Your Name")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "IP Filter Application")
-set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-
-if(WIN32)
-    set(CPACK_GENERATOR "ZIP")
-    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-windows")
-else()
-    set(CPACK_GENERATOR "TGZ")
-    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-linux")
+# Set default build type to Release if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
-include(CPack)
+# Compiler-specific settings
+if(MSVC)
+    # Windows/Visual Studio settings
+    add_compile_options(/W4 /permissive-)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_compile_options(/O2 /DNDEBUG)
+        add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+    else()
+        add_compile_options(/Zi /Od)
+    endif()
+else()
+    # Linux/GCC settings
+    add_compile_options(-Wall -Wextra -pedantic)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_compile_options(-O3 -DNDEBUG)
+    else()
+        add_compile_options(-g -O0)
+    endif()
+endif()
 
-# Установка файлов для пакета
-install(TARGETS ip_filter
-    RUNTIME DESTINATION bin
+# Create executable
+add_executable(containers_demo main.cpp task.cpp)
+
+# Set output properties
+set_target_properties(containers_demo PROPERTIES
+    OUTPUT_NAME "containers_demo"
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
+
+# Installation instructions for packaging
+install(TARGETS containers_demo
+    RUNTIME DESTINATION bin
+    COMPONENT runtime
+)
+
+# Include directories
+target_include_directories(containers_demo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

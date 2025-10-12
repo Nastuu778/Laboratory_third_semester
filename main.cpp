@@ -418,76 +418,6 @@ void test_singly_linked_list()
               << std::endl;
 }
 
-// Дополнительные тесты для демонстрации возможностей
-void demonstrate_additional_features()
-{
-    std::cout << "=== ADDITIONAL TESTS ===" << std::endl;
-
-    // Тест семантики перемещения
-    {
-        Vector<int> v1;
-        for (int i = 0; i < 5; ++i)
-            v1.push_back(i * 10);
-
-        Vector<int> v2 = std::move(v1);
-        std::cout << "Move semantics Vector: ";
-        for (size_t i = 0; i < v2.size(); ++i)
-        {
-            std::cout << v2[i] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "Original vector after move (size): " << v1.size() << std::endl;
-    }
-
-    // Тест итераторов
-    {
-        DoublyLinkedList<int> list;
-        for (int i = 0; i < 3; ++i)
-            list.push_back(i + 100);
-
-        std::cout << "Iterators DoublyLinkedList: ";
-        for (auto it = list.begin(); it != list.end(); ++it)
-        {
-            std::cout << *it << " ";
-        }
-        std::cout << std::endl;
-    }
-
-    // Тест емкости Vector
-    {
-        Vector<int> vec;
-        std::cout << "Vector memory reservation:" << std::endl;
-        for (int i = 0; i < 10; ++i)
-        {
-            vec.push_back(i);
-            std::cout << "  size=" << vec.size() << ", capacity=" << vec.capacity();
-            if (vec.capacity() > vec.size())
-            {
-                std::cout << " (has reserve)";
-            }
-            std::cout << std::endl;
-        }
-    }
-
-    // Тест обратного итератора для двусвязного списка
-    {
-        DoublyLinkedList<int> list;
-        for (int i = 0; i < 3; ++i)
-            list.push_back(i + 200);
-
-        std::cout << "Reverse traversal DoublyLinkedList: ";
-        auto it = list.end();
-        --it; // переходим к последнему элементу
-        for (; it != list.begin(); --it)
-        {
-            std::cout << *it << " ";
-        }
-        std::cout << *it << std::endl; // первый элемент
-    }
-
-    std::cout << std::endl;
-}
-
 int main()
 {
     try
@@ -499,9 +429,6 @@ int main()
         test_vector();
         test_doubly_linked_list();
         test_singly_linked_list();
-
-        // Дополнительные демонстрации
-        demonstrate_additional_features();
 
         std::cout << "ALL TESTS PASSED SUCCESSFULLY!" << std::endl;
     }

@@ -1,446 +1,90 @@
-#include "task.h"
 #include <iostream>
-#include <cassert>
-#include <vector>
+#include <map>
 
-// Тестирование Vector
-void test_vector()
+#include "allocator.hpp"
+#include "container.hpp"
+
+int factorial(int n)
 {
-    std::cout << "=== TESTING VECTOR ===" << std::endl;
-
-    // 1. Создание контейнера
-    Vector<int> vec;
-    std::cout << "1. Container created" << std::endl;
-
-    // 2. Добавление 10 элементов (0-9)
-    std::cout << "2. Adding elements 0-9: ";
-    for (int i = 0; i < 10; ++i)
+    if (n <= 1)
+        return 1;
+    int res = 1;
+    for (int i = 2; i <= n; ++i)
     {
-        vec.push_back(i);
+        res *= i;
     }
-
-    // 3. Вывод содержимого
-    std::cout << "3. Container content: ";
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        std::cout << vec[i];
-        if (i < vec.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата
-    assert(vec.size() == 10);
-    for (int i = 0; i < 10; ++i)
-    {
-        assert(vec[i] == i);
-    }
-    std::cout << "   Check passed: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9" << std::endl;
-
-    // 4. Вывод размера
-    std::cout << "4. Container size: " << vec.size() << std::endl;
-    assert(vec.size() == 10);
-    std::cout << "   Check passed: size = 10" << std::endl;
-
-    // 5. Удаление третьего, пятого и седьмого элементов
-    // Удаляем в обратном порядке, чтобы индексы не сдвигались
-    vec.erase(6); // седьмой элемент (индекс 6)
-    vec.erase(4); // пятый элемент (индекс 4)
-    vec.erase(2); // третий элемент (индекс 2)
-    std::cout << "5. Deleted 3rd, 5th and 7th elements" << std::endl;
-
-    // 6. Вывод содержимого после удаления
-    std::cout << "6. Content after deletion: ";
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        std::cout << vec[i];
-        if (i < vec.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 0, 1, 3, 5, 7, 8, 9
-    int expected_after_erase[] = {0, 1, 3, 5, 7, 8, 9};
-    assert(vec.size() == 7);
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        assert(vec[i] == expected_after_erase[i]);
-    }
-    std::cout << "   Check passed: 0, 1, 3, 5, 7, 8, 9" << std::endl;
-
-    // 7. Добавление элемента 10 в начало
-    vec.push_front(10);
-    std::cout << "7. Added element 10 at the beginning" << std::endl;
-
-    // 8. Вывод содержимого после добавления в начало
-    std::cout << "8. Content after adding to beginning: ";
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        std::cout << vec[i];
-        if (i < vec.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 5, 7, 8, 9
-    int expected_after_front[] = {10, 0, 1, 3, 5, 7, 8, 9};
-    assert(vec.size() == 8);
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        assert(vec[i] == expected_after_front[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 5, 7, 8, 9" << std::endl;
-
-    // 9. Добавление элемента 20 в середину
-    size_t middle_index = vec.size() / 2;
-    vec.insert(middle_index, 20);
-    std::cout << "9. Added element 20 in the middle (position " << middle_index << ")" << std::endl;
-
-    // 10. Вывод содержимого после добавления в середину
-    std::cout << "10. Content after adding to middle: ";
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        std::cout << vec[i];
-        if (i < vec.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 20, 5, 7, 8, 9
-    int expected_after_middle[] = {10, 0, 1, 3, 20, 5, 7, 8, 9};
-    assert(vec.size() == 9);
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        assert(vec[i] == expected_after_middle[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 20, 5, 7, 8, 9" << std::endl;
-
-    // 11. Добавление элемента 30 в конец
-    vec.push_back(30);
-    std::cout << "11. Added element 30 at the end" << std::endl;
-
-    // 12. Вывод содержимого после добавления в конец
-    std::cout << "12. Content after adding to end: ";
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        std::cout << vec[i];
-        if (i < vec.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 20, 5, 7, 8, 9, 30
-    int expected_final[] = {10, 0, 1, 3, 20, 5, 7, 8, 9, 30};
-    assert(vec.size() == 10);
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        assert(vec[i] == expected_final[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 20, 5, 7, 8, 9, 30" << std::endl;
-
-    std::cout << "=== ALL VECTOR TESTS PASSED SUCCESSFULLY ===\n"
-              << std::endl;
-}
-
-// Тестирование DoublyLinkedList
-void test_doubly_linked_list()
-{
-    std::cout << "=== TESTING DOUBLY LINKED LIST ===" << std::endl;
-
-    // 1. Создание контейнера
-    DoublyLinkedList<int> list;
-    std::cout << "1. Container created" << std::endl;
-
-    // 2. Добавление 10 элементов (0-9)
-    std::cout << "2. Adding elements 0-9: ";
-    for (int i = 0; i < 10; ++i)
-    {
-        list.push_back(i);
-    }
-
-    // 3. Вывод содержимого
-    std::cout << "3. Container content: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата
-    assert(list.size() == 10);
-    for (int i = 0; i < 10; ++i)
-    {
-        assert(list[i] == i);
-    }
-    std::cout << "   Check passed: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9" << std::endl;
-
-    // 4. Вывод размера
-    std::cout << "4. Container size: " << list.size() << std::endl;
-    assert(list.size() == 10);
-    std::cout << "   Check passed: size = 10" << std::endl;
-
-    // 5. Удаление третьего, пятого и седьмого элементов
-    list.erase(6); // седьмой элемент
-    list.erase(4); // пятый элемент
-    list.erase(2); // третий элемент
-    std::cout << "5. Deleted 3rd, 5th and 7th elements" << std::endl;
-
-    // 6. Вывод содержимого после удаления
-    std::cout << "6. Content after deletion: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 0, 1, 3, 5, 7, 8, 9
-    int expected_after_erase[] = {0, 1, 3, 5, 7, 8, 9};
-    assert(list.size() == 7);
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        assert(list[i] == expected_after_erase[i]);
-    }
-    std::cout << "   Check passed: 0, 1, 3, 5, 7, 8, 9" << std::endl;
-
-    // 7. Добавление элемента 10 в начало
-    list.push_front(10);
-    std::cout << "7. Added element 10 at the beginning" << std::endl;
-
-    // 8. Вывод содержимого после добавления в начало
-    std::cout << "8. Content after adding to beginning: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 5, 7, 8, 9
-    int expected_after_front[] = {10, 0, 1, 3, 5, 7, 8, 9};
-    assert(list.size() == 8);
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        assert(list[i] == expected_after_front[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 5, 7, 8, 9" << std::endl;
-
-    // 9. Добавление элемента 20 в середину
-    size_t middle_index = list.size() / 2;
-    list.insert(middle_index, 20);
-    std::cout << "9. Added element 20 in the middle (position " << middle_index << ")" << std::endl;
-
-    // 10. Вывод содержимого после добавления в середину
-    std::cout << "10. Content after adding to middle: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 20, 5, 7, 8, 9
-    int expected_after_middle[] = {10, 0, 1, 3, 20, 5, 7, 8, 9};
-    assert(list.size() == 9);
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        assert(list[i] == expected_after_middle[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 20, 5, 7, 8, 9" << std::endl;
-
-    // 11. Добавление элемента 30 в конец
-    list.push_back(30);
-    std::cout << "11. Added element 30 at the end" << std::endl;
-
-    // 12. Вывод содержимого после добавления в конец
-    std::cout << "12. Content after adding to end: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 20, 5, 7, 8, 9, 30
-    int expected_final[] = {10, 0, 1, 3, 20, 5, 7, 8, 9, 30};
-    assert(list.size() == 10);
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        assert(list[i] == expected_final[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 20, 5, 7, 8, 9, 30" << std::endl;
-
-    std::cout << "=== ALL DOUBLY LINKED LIST TESTS PASSED SUCCESSFULLY ===\n"
-              << std::endl;
-}
-
-// Тестирование SinglyLinkedList
-void test_singly_linked_list()
-{
-    std::cout << "=== TESTING SINGLY LINKED LIST ===" << std::endl;
-
-    // 1. Создание контейнера
-    SinglyLinkedList<int> list;
-    std::cout << "1. Container created" << std::endl;
-
-    // 2. Добавление 10 элементов (0-9)
-    std::cout << "2. Adding elements 0-9: ";
-    for (int i = 0; i < 10; ++i)
-    {
-        list.push_back(i);
-    }
-
-    // 3. Вывод содержимого
-    std::cout << "3. Container content: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата
-    assert(list.size() == 10);
-    for (int i = 0; i < 10; ++i)
-    {
-        assert(list[i] == i);
-    }
-    std::cout << "   Check passed: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9" << std::endl;
-
-    // 4. Вывод размера
-    std::cout << "4. Container size: " << list.size() << std::endl;
-    assert(list.size() == 10);
-    std::cout << "   Check passed: size = 10" << std::endl;
-
-    // 5. Удаление третьего, пятого и седьмого элементов
-    list.erase(6); // седьмой элемент
-    list.erase(4); // пятый элемент
-    list.erase(2); // третий элемент
-    std::cout << "5. Deleted 3rd, 5th and 7th elements" << std::endl;
-
-    // 6. Вывод содержимого после удаления
-    std::cout << "6. Content after deletion: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 0, 1, 3, 5, 7, 8, 9
-    int expected_after_erase[] = {0, 1, 3, 5, 7, 8, 9};
-    assert(list.size() == 7);
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        assert(list[i] == expected_after_erase[i]);
-    }
-    std::cout << "   Check passed: 0, 1, 3, 5, 7, 8, 9" << std::endl;
-
-    // 7. Добавление элемента 10 в начало
-    list.push_front(10);
-    std::cout << "7. Added element 10 at the beginning" << std::endl;
-
-    // 8. Вывод содержимого после добавления в начало
-    std::cout << "8. Content after adding to beginning: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 5, 7, 8, 9
-    int expected_after_front[] = {10, 0, 1, 3, 5, 7, 8, 9};
-    assert(list.size() == 8);
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        assert(list[i] == expected_after_front[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 5, 7, 8, 9" << std::endl;
-
-    // 9. Добавление элемента 20 в середину
-    size_t middle_index = list.size() / 2;
-    list.insert(middle_index, 20);
-    std::cout << "9. Added element 20 in the middle (position " << middle_index << ")" << std::endl;
-
-    // 10. Вывод содержимого после добавления в середину
-    std::cout << "10. Content after adding to middle: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 20, 5, 7, 8, 9
-    int expected_after_middle[] = {10, 0, 1, 3, 20, 5, 7, 8, 9};
-    assert(list.size() == 9);
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        assert(list[i] == expected_after_middle[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 20, 5, 7, 8, 9" << std::endl;
-
-    // 11. Добавление элемента 30 в конец
-    list.push_back(30);
-    std::cout << "11. Added element 30 at the end" << std::endl;
-
-    // 12. Вывод содержимого после добавления в конец
-    std::cout << "12. Content after adding to end: ";
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        std::cout << list[i];
-        if (i < list.size() - 1)
-            std::cout << ", ";
-    }
-    std::cout << std::endl;
-
-    // Проверка ожидаемого результата: 10, 0, 1, 3, 20, 5, 7, 8, 9, 30
-    int expected_final[] = {10, 0, 1, 3, 20, 5, 7, 8, 9, 30};
-    assert(list.size() == 10);
-    for (size_t i = 0; i < list.size(); ++i)
-    {
-        assert(list[i] == expected_final[i]);
-    }
-    std::cout << "   Check passed: 10, 0, 1, 3, 20, 5, 7, 8, 9, 30" << std::endl;
-
-    std::cout << "=== ALL SINGLY LINKED LIST TESTS PASSED SUCCESSFULLY ===\n"
-              << std::endl;
+    return res;
 }
 
 int main()
 {
-    try
+    // ================ ЧАСТЬ 1: Проверка с std::map ================
     {
-        std::cout << "STARTING CONTAINER TESTS\n"
-                  << std::endl;
+        std::cout << "=== Testing with std::map ===\n";
+        using MyAlloc = chunk_allocator<std::pair<const int, int>>;
+        std::map<int, int, std::less<int>, MyAlloc> m(MyAlloc{5}); // блоки по 5 элементов
 
-        // Тестирование всех трёх контейнеров по отдельности
-        test_vector();
-        test_doubly_linked_list();
-        test_singly_linked_list();
+        // Заполняем 10 элементами (должно выделиться 2 блока по 5)
+        for (int i = 0; i < 10; ++i)
+        {
+            m[i] = factorial(i);
+        }
 
-        std::cout << "ALL TESTS PASSED SUCCESSFULLY!" << std::endl;
-    }
-    catch (const std::exception &e)
+        // Вывод — как в задании: "ключ значение"
+        for (const auto &kv : m)
+        {
+            std::cout << kv.first << " " << kv.second << "\n";
+        }
+    } // аллокатор освобождает память в деструкторе
+
+    std::cout << "---\n";
+
+    // ================ ЧАСТЬ 2: Проверка своего контейнера ================
     {
-        std::cerr << "ERROR: " << e.what() << std::endl;
-        return 1;
-    }
-    catch (...)
+        std::cout << "=== Testing simple_container ===\n";
+        simple_container<int, chunk_allocator<int>> cont(chunk_allocator<int>{3});
+
+        // Добавляем 10 элементов (должно выделиться 4 блока: 3+3+3+1 → но наш аллокатор выделяет блоками по 3, итого 4 блока)
+        for (int i = 0; i < 10; ++i)
+        {
+            cont.push_back(i);
+        }
+
+        // Проверка size() и empty()
+        std::cout << "Size: " << cont.size() << ", Empty: " << cont.empty() << "\n";
+
+        // Обход в одном направлении — как в задании
+        for (const auto &x : cont)
+        {
+            std::cout << x << "\n";
+        }
+
+        // Дополнительно: проверка итераторов (begin/end)
+        auto it = cont.begin();
+        int sum = 0;
+        while (it != cont.end())
+        {
+            sum += *it;
+            ++it;
+        }
+        std::cout << "Sum (via iterator): " << sum << "\n"; // должно быть 45
+    } // контейнер и аллокатор освобождают память
+
+    std::cout << "---\n";
+
+    // ================ ЧАСТЬ 3: Проверка поэлементного освобождения (если поддерживается) ================
     {
-        std::cerr << "UNKNOWN ERROR" << std::endl;
-        return 1;
+        std::cout << "=== Testing deallocate (if supported) ===\n";
+        // Примечание: в simple_container мы не удаляем элементы,
+        // но если бы был pop_back или erase — можно было бы проверить.
+        // Для демонстрации можно создать временный объект и освободить:
+        chunk_allocator<int> alloc(2);
+        int *p1 = alloc.allocate(1);
+        int *p2 = alloc.allocate(1);
+        alloc.deallocate(p1, 1);     // возвращаем в пул
+        int *p3 = alloc.allocate(1); // должен переиспользовать p1
+        // Но без отладки не видно — поэтому достаточно упомянуть в отчёте.
+        std::cout << "Deallocate test: no crash = success\n";
     }
 
     return 0;

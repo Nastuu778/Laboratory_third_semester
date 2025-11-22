@@ -1,6 +1,5 @@
 #include <iostream>
 #include <map>
-
 #include "allocator.hpp"
 #include "container.hpp"
 
@@ -18,73 +17,69 @@ int factorial(int n)
 
 int main()
 {
-    // ================ ЧАСТЬ 1: Проверка с std::map ================
+    // 1) Создание экземпляра std::map<int, int>
+    std::map<int, int> m1;
+
+    // 2) Заполнение 10 элементами: ключ — 0..9, значение — факториал ключа
+    for (int i = 0; i < 10; ++i)
     {
-        std::cout << "=== Testing with std::map ===\n";
-        using MyAlloc = chunk_allocator<std::pair<const int, int>>;
-        std::map<int, int, std::less<int>, MyAlloc> m(MyAlloc{5}); // блоки по 5 элементов
+        m1[i] = factorial(i);
+    }
 
-        // Заполняем 10 элементами (должно выделиться 2 блока по 5)
-        for (int i = 0; i < 10; ++i)
-        {
-            m[i] = factorial(i);
-        }
-
-        // Вывод — как в задании: "ключ значение"
-        for (const auto &kv : m)
-        {
-            std::cout << kv.first << " " << kv.second << "\n";
-        }
-    } // аллокатор освобождает память в деструкторе
-
-    std::cout << "---\n";
-
-    // ================ ЧАСТЬ 2: Проверка своего контейнера ================
+    // Вывод m1 (обычный map)
+    std::cout << "=== std::map (default allocator) ===\n";
+    for (const auto &kv : m1)
     {
-        std::cout << "=== Testing simple_container ===\n";
-        simple_container<int, chunk_allocator<int>> cont(chunk_allocator<int>{3});
+        std::cout << kv.first << " " << kv.second << "\n";
+    }
 
-        // Добавляем 10 элементов (должно выделиться 4 блока: 3+3+3+1 → но наш аллокатор выделяет блоками по 3, итого 4 блока)
-        for (int i = 0; i < 10; ++i)
-        {
-            cont.push_back(i);
-        }
+    // 3) Создание std::map с кастомным аллокатором (лимит 10 элементов)
+    using MyAlloc = chunk_allocator<std::pair<const int, int>>;
+    std::map<int, int, std::less<int>, MyAlloc> m2(MyAlloc{10});
 
-        // Проверка size() и empty()
-        std::cout << "Size: " << cont.size() << ", Empty: " << cont.empty() << "\n";
-
-        // Обход в одном направлении — как в задании
-        for (const auto &x : cont)
-        {
-            std::cout << x << "\n";
-        }
-
-        // Дополнительно: проверка итераторов (begin/end)
-        auto it = cont.begin();
-        int sum = 0;
-        while (it != cont.end())
-        {
-            sum += *it;
-            ++it;
-        }
-        std::cout << "Sum (via iterator): " << sum << "\n"; // должно быть 45
-    } // контейнер и аллокатор освобождают память
-
-    std::cout << "---\n";
-
-    // ================ ЧАСТЬ 3: Проверка поэлементного освобождения (если поддерживается) ================
+    // 4) Заполнение 10 элементами
+    for (int i = 0; i < 10; ++i)
     {
-        std::cout << "=== Testing deallocate (if supported) ===\n";
-        // Примечание: в simple_container мы не удаляем элементы,
-        // но если бы был pop_back или erase — можно было бы проверить.
-        // Для демонстрации можно создать временный объект и освободить:
-        chunk_allocator<int> alloc(2);
-        int *p1 = alloc.allocate(1);
-        int *p2 = alloc.allocate(1);
-        alloc.deallocate(p1, 1);     // возвращаем в пул
-        int *p3 = alloc.allocate(1); // должен переиспользовать p1
-        // Но без отладки не видно — поэтому достаточно упомянуть в отчёте.
-        std::cout << "Deallocate test: no crash = success\n";
+        m2[i] = factorial(i);
+    }
+
+    // 5) Вывод m2
+    std::cout << "=== std::map (custom allocator, limit=10) ===\n";
+    for (const auto &kv : m2)
+    {
+        std::cout << kv.first << " " << kv.second << "\n";
+    }
+
+    // 6) Создание своего контейнера (без кастомного аллокатора)
+    simple_container<int> cont1;
+
+    // 7) Заполнение 10 элементами от 0 до 9
+    for (int i = 0; i < 10; ++i)
+    {
+        cont1.push_back(i);
+    }
+
+    // Вывод cont1
+    std::cout << "=== simple_container (default allocator) ===\n";
+    for (const auto &x : cont1)
+    {
+        std::cout << x << "\n";
+    }
+
+    // 8) Создание своего контейнера с кастомным аллокатором (лимит 10)
+    simple_container<int, chunk_allocator<int>> cont2(chunk_allocator<int>{10});
+
+    // 9) Заполнение 10 элементами от 0 до 9
+    for (int i = 0; i < 10; ++i)
+    {
+        cont2.push_back(i);
+    }
+
+    // Вывод cont2
+    std::cout << "=== simple_container (custom allocator, limit=10) ===\n";
+    for (const auto &x : cont2)
+    {
+        std::cout << x << "\n";
     }
 
     return 0;

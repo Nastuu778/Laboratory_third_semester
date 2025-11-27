@@ -40,3 +40,21 @@ target_compile_options(physics PRIVATE
         $<$<CXX_COMPILER_ID:MSVC>:/W4>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
         )
+# Настройка CPack для создания пакетов
+set(CPACK_PACKAGE_NAME "physics")
+set(CPACK_PACKAGE_VENDOR "Student")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Physics simulation with SFML")
+set(CPACK_PACKAGE_VERSION_MAJOR "0")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_PATCH "1")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "physics")
+
+# Для DEB пакетов (Linux)
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Student")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "")           
+
+# Для Windows (NSIS или ZIP — CPack сам выберет)
+set(CPACK_NSIS_DISPLAY_NAME "Physics Simulator")
+set(CPACK_NSIS_PACKAGE_NAME "physics")
+
+include(CPack)

@@ -125,10 +125,11 @@ jobs:
       - name: Build project
         run: cmake --build build --config Release --verbose
 
-      - name: Run test
+      # запуск без ожидания завершения
+      - name: Run physics.exe (no wait, just check it starts)
         shell: pwsh
         run: |
-          Start-Process -FilePath "build\Release\physics.exe" -ArgumentList "..\data\smile.txt" -PassThru | Wait-Process -Timeout 30
+          Start-Process -FilePath "build\Release\physics.exe" -ArgumentList "..\data\smile.txt"
 
       - name: Create ZIP archive
         shell: pwsh

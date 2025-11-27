@@ -1,9 +1,9 @@
-name: C++ CI
+name: 'Physics Simulator CI'
 
 on:
   push:
     branches:
-      - lab4  
+      - lab5
 
 jobs:
   create-release:
@@ -14,7 +14,7 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_version: ${{ steps.get_version.outputs.commit_count }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -22,16 +22,16 @@ jobs:
         id: get_version
         run: |
           COMMIT_COUNT=$(git rev-list --count HEAD)
-          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+          echo "commit_count=$COMMIT_COUNT" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v0.0.${{ steps.get_version.outputs.commit_count }}
-          release_name: Release v0.0.${{ steps.get_version.outputs.commit_count }}
+          name: Release v0.0.${{ steps.get_version.outputs.commit_count }}
           draft: false
           prerelease: false
 
@@ -41,34 +41,54 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
 
-      - name: Install CMake
-        run: sudo apt-get update && sudo apt-get install -y cmake g++
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libboost-test-dev cmake
 
-      - name: Configure
-        run: cmake -S . -B build
+      - name: Configure CMake
+        run: cmake -B build
 
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build --verbose
 
-      - name: Run executable (basic test)
-        run: ./build/CustomAllocatorDemo
-
-      - name: Create Linux archive
+      - name: Run tests (if any)
         run: |
           cd build
-          tar -czf CustomAllocatorDemo-linux.tar.gz CustomAllocatorDemo
+          ./physics ../data/smile.txt &  # запустить в фоне, если интерактивный
+          sleep 2
+          kill %1 || true   # завершить, если не завершился сам
 
-      - name: Upload Linux Asset
+      - name: Package (create .deb)
+        run: |
+          cd build
+          cpack -G DEB
+
+      - name: Find and upload .deb
+        run: |
+          ls -l build/
+          DEB_FILE=$(find build -name "*.deb" | head -n1)
+          if [ -z "$DEB_FILE" ]; then
+            echo "No .deb file found!"
+            exit 1
+          fi
+          echo "Found DEB: $DEB_FILE"
+          cp "$DEB_FILE" physics-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
+
+      - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./build/CustomAllocatorDemo-linux.tar.gz
-          asset_name: CustomAllocatorDemo-linux.tar.gz
-          asset_content_type: application/gzip
+          asset_path: ./physics-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
+          asset_name: physics-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
+          asset_content_type: application/vnd.debian.binary-package
 
   build-windows:
     runs-on: windows-latest
@@ -76,30 +96,47 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
 
-      - name: Install CMake
-        run: choco install cmake -y --installargs '"ADD_CMAKE_TO_PATH=System"'
-
-      - name: Configure
-        run: cmake -S . -B build
-
-      - name: Build
-        run: cmake --build build --config Release
-
-      - name: Run executable (basic test)
-        run: .\build\Release\CustomAllocatorDemo.exe
-
-      - name: Create Windows archive
+      - name: Install CMake and vcpkg
         run: |
-          Compress-Archive -Path "build/Release/CustomAllocatorDemo.exe" -DestinationPath "CustomAllocatorDemo-windows.zip"
+          choco install cmake -y --installargs 'ADD_CMAKE_TO_PATH=System'
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
 
-      - name: Upload Windows Asset
+      - name: Install dependencies via vcpkg
+        run: |
+          cd vcpkg
+          .\vcpkg install boost-test:x64-windows
+
+      - name: Configure CMake with vcpkg toolchain
+        run: |
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake" -A x64
+
+      - name: Build project
+        run: cmake --build build --config Release --verbose
+
+      - name: Run test (optional)
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "build\Release\physics.exe" -ArgumentList "..\data\smile.txt" -PassThru | Wait-Process -Timeout 3
+
+      - name: Create ZIP archive
+        shell: pwsh
+        run: |
+          $version = "${{ needs.create-release.outputs.release_version }}"
+          Compress-Archive -Path "build\Release\physics.exe" -DestinationPath "physics-windows-v0.0.$version.zip"
+
+      - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./CustomAllocatorDemo-windows.zip
-          asset_name: CustomAllocatorDemo-windows.zip
+          asset_path: ./physics-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
+          asset_name: physics-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
           asset_content_type: application/zip

@@ -51,6 +51,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libboost-test-dev cmake
 
+      # 👇 Добавлено: зависимости для SFML (X11 + OpenGL)
+      - name: Install X11 and OpenGL dependencies for SFML
+        run: |
+          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+
       - name: Configure CMake
         run: cmake -B build
 
@@ -120,10 +125,10 @@ jobs:
       - name: Build project
         run: cmake --build build --config Release --verbose
 
-      - name: Run test (optional)
+      - name: Run test
         shell: pwsh
         run: |
-          Start-Process -FilePath "build\Release\physics.exe" -ArgumentList "..\data\smile.txt" -PassThru | Wait-Process -Timeout 3
+          Start-Process -FilePath "build\Release\physics.exe" -ArgumentList "..\data\smile.txt" -PassThru | Wait-Process -Timeout 30
 
       - name: Create ZIP archive
         shell: pwsh

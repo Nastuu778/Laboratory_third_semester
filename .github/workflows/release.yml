@@ -51,10 +51,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libboost-test-dev cmake
 
-      # 👇 Добавлено: зависимости для SFML (X11 + OpenGL)
+      # зависимости для SFML (X11 + OpenGL)
       - name: Install X11 and OpenGL dependencies for SFML
         run: |
-          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+          sudo apt-get install -y libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev libudev-dev
 
       - name: Configure CMake
         run: cmake -B build

@@ -31,5 +31,5 @@ double Ball::getRadius() const {
 }
 
 double Ball::getMass() const {
-    return (4.0 / 3.0) * M_PI * radius_ * radius_ * radius_;
+    return M_PI * radius_ * radius_;
 }

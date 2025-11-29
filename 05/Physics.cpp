@@ -1,7 +1,4 @@
 #include "Physics.h"
-#include "Dust.hpp"
-#include "World.h"
-#include <random>
 
 double dot(const Point& lhs, const Point& rhs) {
     return lhs.x * rhs.x + lhs.y * rhs.y;
@@ -26,11 +23,6 @@ void Physics::update(std::vector<Ball>& balls, const size_t ticks) const {
 void Physics::collideBalls(std::vector<Ball>& balls) const {
     for (auto a = balls.begin(); a != balls.end(); ++a) {
         for (auto b = std::next(a); b != balls.end(); ++b) {
-            // НОВОЕ УСЛОВИЕ
-            if (!a->isCollidable() || !b->isCollidable()) {
-                continue;
-            }
-
             const double distanceBetweenCenters2 =
                 distance2(a->getCenter(), b->getCenter());
             const double collisionDistance = a->getRadius() + b->getRadius();
@@ -90,24 +82,4 @@ void Physics::processCollision(Ball& a, Ball& b,
     // задаем новые скорости мячей после столкновения
     a.setVelocity(Velocity(aV - normal * p * a.getMass()));
     b.setVelocity(Velocity(bV + normal * p * b.getMass()));
-
-    if (world_) {
-        Point collisionPoint = (a.getCenter() + b.getCenter()) * 0.5;
-
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        std::uniform_real_distribution<> angle(0, 2 * M_PI);
-        std::uniform_real_distribution<> speed(50,
-                                               150); // ↓↓↓ уменьшили скорость
-
-        for (int i = 0; i < 8; ++i) { // ↑↑↑ больше частиц
-            double a = angle(gen);
-            double s = speed(gen);
-            Point vel{std::cos(a) * s, std::sin(a) * s};
-
-            // ↑↑↑ дольше живут (1.5 сек вместо 0.8)
-            Dust d(collisionPoint, vel, 1.5, Color{1.0, 0.0, 0.0});
-            const_cast<World*>(world_)->addDust(d);
-        }
-    }
 }

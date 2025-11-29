@@ -27,7 +27,9 @@ class Ball {
 
     double getRadius() const;
     double getMass() const;
-    bool isCollidable() const; // ← очень пригодится в пункте 3
+    bool isCollidable() const {
+        return collidable_;
+    } // ← очень пригодится в пункте 3
 
     void draw(Painter& painter) const;
 };

@@ -1,35 +1,25 @@
 #pragma once
-
-#include "Color.h"
 #include "Painter.h"
 #include "Point.h"
 #include "Velocity.h"
 
 class Ball {
   private:
-    Point center_;
-    Velocity velocity_;
-    double radius_;
-    Color color_;
-    bool collidable_;
+    Velocity ballVelocity;
+    Point ballCenter;
+    Color ballColor;
+    double ballRadius;
+    bool isCollidable;
 
   public:
-    // Конструктор — обязателен!
-    Ball(Point center, Velocity velocity, double radius, Color color,
-         bool collidable = true);
-
-    // Геттеры и сеттеры
+    Ball(Point center, double radius, Velocity velocity, Color color,
+         bool collusion);
     void setVelocity(const Velocity& velocity);
     Velocity getVelocity() const;
-
+    void draw(Painter& painter) const;
     void setCenter(const Point& center);
     Point getCenter() const;
-
     double getRadius() const;
     double getMass() const;
-    bool isCollidable() const {
-        return collidable_;
-    } // ← очень пригодится в пункте 3
-
-    void draw(Painter& painter) const;
+    bool getCollision() const;
 };

@@ -1,23 +1,23 @@
-// Dust.cpp
-#include "Dust.hpp"
-#include "Painter.h"
-#include <cmath>
-#include <random>
+#include "Dust.h"
 
-Dust::Dust(Point position, Point velocity, double lifetime, Color color)
-    : position(position), velocity(velocity), lifetime(lifetime), color(color) {
+Dust::Dust(Point center, double radius, Point velocity, Color color,
+           double lifetimer) {
+    dustCenter = center;
+    dustVelocity = velocity;
+    dustRadius = radius;
+    dustColor = color;
+    lifeTimer = lifetimer;
 }
 
-void Dust::update(double dt) {
-    position = position + velocity * dt;
-    lifetime -= dt;
+void Dust::update(double tick) {
+    dustCenter = dustCenter + dustVelocity * tick;
+    lifeTimer -= tick;
 }
 
-bool Dust::isAlive() const {
-    return lifetime > 0;
+bool Dust::isDead() const {
+    return lifeTimer <= 0.0;
 }
 
 void Dust::draw(Painter& painter) const {
-    // СДЕЛАЕМ ПЫЛЬ ЯРКО-КРАСНОЙ, БОЛЬШОЙ И ХОРОШО ВИДНОЙ
-    painter.draw(position, 8.0, Color{1.0, 0.0, 0.0}); // радиус 8, красный
+    painter.draw(dustCenter, dustRadius, dustColor);
 }

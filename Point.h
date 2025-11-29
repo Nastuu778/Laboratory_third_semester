@@ -8,11 +8,14 @@ class Point {
     inline Point(double x, double y) : x{x}, y{y} {};
     double x{};
     double y{};
-};
 
-inline std::istream& operator>>(std::istream& is, Point& p) {
-    return is >> p.x >> p.y;
-}
+    // Без friend внешняя функция не может обращаться к private/protected
+    // членам, и попытка это сделать приведёт к ошибке компиляции.
+    friend std::istream& operator>>(std::istream& stream, Point& point) {
+        stream >> point.x >> point.y;
+        return stream;
+    }
+};
 
 inline Point operator-(const Point& lhs, const Point& rhs) {
     return {lhs.x - rhs.x, lhs.y - rhs.y};

@@ -25,6 +25,13 @@ class Velocity {
         return vec;
     }
 
+    friend std::istream& operator>>(std::istream& stream, Velocity& velocity) {
+        Point vect;
+        stream >> vect.x >> vect.y;
+        velocity.vec = vect;
+        return stream;
+    }
+
   private:
     Point vec;
 };

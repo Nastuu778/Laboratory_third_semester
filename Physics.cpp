@@ -1,7 +1,4 @@
 #include "Physics.h"
-#include "Dust.hpp"
-#include "World.h"
-#include <random>
 
 double dot(const Point& lhs, const Point& rhs) {
     return lhs.x * rhs.x + lhs.y * rhs.y;
@@ -14,23 +11,24 @@ void Physics::setWorldBox(const Point& topLeft, const Point& bottomRight) {
     this->bottomRight = bottomRight;
 }
 
-void Physics::update(std::vector<Ball>& balls, const size_t ticks) const {
+void Physics::update(std::vector<Ball>& balls, const size_t ticks,
+                     std::vector<Dust>& dusts) const {
 
     for (size_t i = 0; i < ticks; ++i) {
         move(balls);
+        updateDust(dusts);
         collideWithBox(balls);
-        collideBalls(balls);
+        collideBalls(balls, dusts);
     }
 }
 
-void Physics::collideBalls(std::vector<Ball>& balls) const {
+void Physics::collideBalls(std::vector<Ball>& balls,
+                           std::vector<Dust>& dusts) const {
     for (auto a = balls.begin(); a != balls.end(); ++a) {
         for (auto b = std::next(a); b != balls.end(); ++b) {
-            // НОВОЕ УСЛОВИЕ
-            if (!a->isCollidable() || !b->isCollidable()) {
+            if (!a->getCollision() || !b->getCollision()) {
                 continue;
             }
-
             const double distanceBetweenCenters2 =
                 distance2(a->getCenter(), b->getCenter());
             const double collisionDistance = a->getRadius() + b->getRadius();
@@ -38,14 +36,16 @@ void Physics::collideBalls(std::vector<Ball>& balls) const {
                 collisionDistance * collisionDistance;
 
             if (distanceBetweenCenters2 < collisionDistance2) {
-                processCollision(*a, *b, distanceBetweenCenters2);
+                processCollision(*a, *b, distanceBetweenCenters2, dusts);
             }
         }
     }
 }
-
 void Physics::collideWithBox(std::vector<Ball>& balls) const {
     for (Ball& ball : balls) {
+        if (!ball.getCollision()) {
+            continue;
+        }
         const Point p = ball.getCenter();
         const double r = ball.getRadius();
         // определяет, находится ли v в диапазоне (lo, hi) (не включая границы)
@@ -73,8 +73,8 @@ void Physics::move(std::vector<Ball>& balls) const {
     }
 }
 
-void Physics::processCollision(Ball& a, Ball& b,
-                               double distanceBetweenCenters2) const {
+void Physics::processCollision(Ball& a, Ball& b, double distanceBetweenCenters2,
+                               std::vector<Dust>& dusts) const {
     // нормированный вектор столкновения
     const Point normal =
         (b.getCenter() - a.getCenter()) / std::sqrt(distanceBetweenCenters2);
@@ -91,23 +91,28 @@ void Physics::processCollision(Ball& a, Ball& b,
     a.setVelocity(Velocity(aV - normal * p * a.getMass()));
     b.setVelocity(Velocity(bV + normal * p * b.getMass()));
 
-    if (world_) {
-        Point collisionPoint = (a.getCenter() + b.getCenter()) * 0.5;
+    Point collisionPoint = Point{(a.getCenter().x + b.getCenter().x) / 2.0,
+                                 (a.getCenter().y + b.getCenter().y) / 2.0};
 
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        std::uniform_real_distribution<> angle(0, 2 * M_PI);
-        std::uniform_real_distribution<> speed(50,
-                                               150); // ↓↓↓ уменьшили скорость
+    const int particles = 7;
+    const double speed = 120;
+    const double lifeTime = 1.2;
+    const double rad = 7.0;
 
-        for (int i = 0; i < 8; ++i) { // ↑↑↑ больше частиц
-            double a = angle(gen);
-            double s = speed(gen);
-            Point vel{std::cos(a) * s, std::sin(a) * s};
+    for (int i = 0; i < particles; ++i) {
+        double ang = 2.0 * M_PI * static_cast<double>(i) / particles;
+        Point vel = Point{std::cos(ang), std::sin(ang)} * speed;
+        dusts.emplace_back(collisionPoint, rad, vel, Color(1, 0, 0), lifeTime);
+    }
+}
 
-            // ↑↑↑ дольше живут (1.5 сек вместо 0.8)
-            Dust d(collisionPoint, vel, 1.5, Color{1.0, 0.0, 0.0});
-            const_cast<World*>(world_)->addDust(d);
+void Physics::updateDust(std::vector<Dust>& dusts) const {
+    for (auto it = dusts.begin(); it != dusts.end();) {
+        it->update(timePerTick);
+        if (it->isDead()) {
+            it = dusts.erase(it);
+        } else {
+            ++it;
         }
     }
 }

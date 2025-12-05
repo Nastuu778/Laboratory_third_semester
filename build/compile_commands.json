@@ -1,0 +1,20 @@
+[
+{
+  "directory": "C:/Dev/working1/Laba6/build",
+  "command": "C:\\msys64\\mingw64\\bin\\c++.exe -IC:/Dev/working1/Laba6/include -g -std=c++17 -Wall -Wextra -Wpedantic -o CMakeFiles\\vector-editor.dir\\src\\controller\\Controller.cpp.obj -c C:\\Dev\\working1\\Laba6\\src\\controller\\Controller.cpp",
+  "file": "C:/Dev/working1/Laba6/src/controller/Controller.cpp",
+  "output": "C:/Dev/working1/Laba6/build/CMakeFiles/vector-editor.dir/src/controller/Controller.cpp.obj"
+},
+{
+  "directory": "C:/Dev/working1/Laba6/build",
+  "command": "C:\\msys64\\mingw64\\bin\\c++.exe -IC:/Dev/working1/Laba6/include -g -std=c++17 -Wall -Wextra -Wpedantic -o CMakeFiles\\vector-editor.dir\\src\\main.cpp.obj -c C:\\Dev\\working1\\Laba6\\src\\main.cpp",
+  "file": "C:/Dev/working1/Laba6/src/main.cpp",
+  "output": "C:/Dev/working1/Laba6/build/CMakeFiles/vector-editor.dir/src/main.cpp.obj"
+},
+{
+  "directory": "C:/Dev/working1/Laba6/build",
+  "command": "C:\\msys64\\mingw64\\bin\\c++.exe -IC:/Dev/working1/Laba6/include -g -std=c++17 -Wall -Wextra -Wpedantic -o CMakeFiles\\vector-editor.dir\\src\\model\\Document.cpp.obj -c C:\\Dev\\working1\\Laba6\\src\\model\\Document.cpp",
+  "file": "C:/Dev/working1/Laba6/src/model/Document.cpp",
+  "output": "C:/Dev/working1/Laba6/build/CMakeFiles/vector-editor.dir/src/model/Document.cpp.obj"
+}
+]

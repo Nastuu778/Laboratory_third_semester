@@ -1,0 +1,3 @@
+C:/Dev/working1/Laba6/build/CMakeFiles/vector-editor.dir
+C:/Dev/working1/Laba6/build/CMakeFiles/edit_cache.dir
+C:/Dev/working1/Laba6/build/CMakeFiles/rebuild_cache.dir

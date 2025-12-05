@@ -1,0 +1,5 @@
+# ninja log v7
+4	490	7866192464416439	CMakeFiles/vector-editor.dir/src/controller/Controller.cpp.obj	e796945aab7efef3
+16	508	7866192464539541	CMakeFiles/vector-editor.dir/src/model/Document.cpp.obj	26c54ef758d725ad
+11	581	7866192464471438	CMakeFiles/vector-editor.dir/src/main.cpp.obj	a766768d244c0521
+581	748	7866192470152857	vector-editor.exe	3a4a4bf69302919b

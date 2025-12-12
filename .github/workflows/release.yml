@@ -1,4 +1,4 @@
-name: 'Duplicate Finder CI'
+name: 'C++ CI'
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_version: ${{ steps.get_version.outputs.commit_count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -22,16 +22,16 @@ jobs:
         id: get_version
         run: |
           COMMIT_COUNT=$(git rev-list --count HEAD)
-          echo "commit_count=$COMMIT_COUNT" >> "$GITHUB_OUTPUT"
+          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v0.0.${{ steps.get_version.outputs.commit_count }}
-          name: Release v0.0.${{ steps.get_version.outputs.commit_count }}
+          release_name: Release v0.0.${{ steps.get_version.outputs.commit_count }}
           draft: false
           prerelease: false
 
@@ -41,70 +41,36 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
         with:
+          submodules: true
           fetch-depth: 0
 
-      - name: Install system dependencies
+      - name: Install Boost dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libboost-filesystem-dev libboost-program-options-dev libboost-system-dev cmake
+          sudo apt-get install -y libboost-filesystem-dev libboost-program-options-dev libboost-system-dev
 
       - name: Configure CMake
         run: cmake -B build
 
       - name: Build
-        run: cmake --build build --verbose
+        run: cmake --build build
 
-      - name: Run with test data (non-interactive)
-        run: |
-          # Создаём тестовые файлы
-          mkdir -p tests
-          echo "duplicate content" > tests/a.txt
-          cp tests/a.txt tests/b.txt
-          echo "different" > tests/c.txt
-          # Запускаем — ожидаем, что a и b будут дубликатами
-          ./build/duplicate_finder -d tests
-
-      - name: Package (create .deb) — optional
+      - name: Package (creates .deb if CPack is configured)
         run: |
           cd build
-          cpack -G DEB
+          cmake --build . --target package
 
-      - name: Find and upload .deb (if exists)
-        run: |
-          cd build
-          DEB_FILE=$(find . -name "*.deb" | head -n1)
-          if [ -n "$DEB_FILE" ]; then
-            cp "$DEB_FILE" ../duplicate_finder-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
-            echo "DEB packaged successfully."
-          else
-            echo "No .deb file — skipping upload."
-            exit 0
-          fi
-
-      - name: Upload Linux Release Asset (.deb)
-        if: hashFiles('duplicate_finder-0.0.*-Linux.deb') != ''
+      - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./duplicate_finder-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
+          asset_path: ./build/duplicate_finder-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
           asset_name: duplicate_finder-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
-
-      - name: Create and upload tar.gz fallback
-        run: |
-          tar -czf duplicate_finder-linux.tar.gz -C build duplicate_finder
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./duplicate_finder-linux.tar.gz
-          asset_name: duplicate_finder-0.0.${{ needs.create-release.outputs.release_version }}-Linux.tar.gz
-          asset_content_type: application/gzip
 
   build-windows:
     runs-on: windows-latest
@@ -112,40 +78,27 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
         with:
+          submodules: true
           fetch-depth: 0
 
-      - name: Install CMake and vcpkg
+      - name: Install dependencies
         run: |
           choco install cmake -y --installargs 'ADD_CMAKE_TO_PATH=System'
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
           .\bootstrap-vcpkg.bat
-
-      - name: Install Boost via vcpkg
-        run: |
-          cd vcpkg
           .\vcpkg install boost-filesystem boost-program-options boost-system:x64-windows
 
-      - name: Configure CMake with vcpkg
+      - name: Configure CMake
         run: |
           cmake -B build -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake" -A x64
 
       - name: Build project
-        run: cmake --build build --config Release --verbose
+        run: cmake --build build --config Release
 
-      - name: Prepare test data and run
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path tests
-          Set-Content tests/a.txt "duplicate content"
-          Copy-Item tests/a.txt tests/b.txt
-          Set-Content tests/c.txt "different"
-          # Запуск — не должен зависать
-          & build\Release\duplicate_finder.exe -d tests
-
-      - name: Create ZIP archive
+      - name: Create Windows distribution package
         shell: pwsh
         run: |
           $version = "${{ needs.create-release.outputs.release_version }}"

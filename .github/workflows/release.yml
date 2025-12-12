@@ -62,6 +62,18 @@ jobs:
           cd build
           cmake --build . --target package
 
+      - name: Locate and rename .deb to predictable name
+        run: |
+          DEB_FILE=$(find build -name "*.deb" | head -n1)
+          if [ -z "$DEB_FILE" ]; then
+            echo "No .deb file found after CPack!"
+            ls -la build/
+            exit 1
+          fi
+          echo "Found .deb: $DEB_FILE"
+          TARGET_NAME="duplicate_finder-7.0.${{ needs.create-release.outputs.release_version }}-Linux.deb"
+          mv "$DEB_FILE" "build/$TARGET_NAME"
+
       - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -86,7 +98,7 @@ jobs:
       - name: Install dependencies
         run: |
           choco install cmake -y --installargs 'ADD_CMAKE_TO_PATH=System'
-          git clone https://github.com/Microsoft/vcpkg.git  
+          git clone https://github.com/Microsoft/vcpkg.git    
           cd vcpkg
           .\bootstrap-vcpkg.bat
           .\vcpkg install boost-filesystem boost-program-options boost-system:x64-windows

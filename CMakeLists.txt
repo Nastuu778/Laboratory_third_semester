@@ -9,7 +9,6 @@ find_package(Boost REQUIRED COMPONENTS system filesystem program_options)
 
 # Включаем Boost headers
 include_directories(${Boost_INCLUDE_DIRS})
-include(CPack)
 
 # Исходники
 file(GLOB_RECURSE SOURCES src/*.cpp)
@@ -20,6 +19,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Линкуем Boost (даже если header-only — на всякий случай)
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
 
+include(CPack)
 set(CPACK_PACKAGE_NAME "duplicate_finder")
 set(CPACK_PACKAGE_VERSION "7.0.${COMMIT_COUNT}")  # но COMMIT_COUNT нужно передать
 set(CPACK_GENERATOR "DEB")

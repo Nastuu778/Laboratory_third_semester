@@ -18,3 +18,11 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 # Линкуем Boost (даже если header-only — на всякий случай)
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+
+# --- CPack Configuration ---
+set(CPACK_PACKAGE_NAME "duplicate_finder")
+set(CPACK_PACKAGE_VERSION "0.0.1") # можно заменить на ${COMMIT_COUNT} через переменную
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Duplicate file finder utility")
+include(CPack)

@@ -68,8 +68,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./build/duplicate_finder-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
-          asset_name: duplicate_finder-0.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
+          asset_path: ./build/duplicate_finder-7.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
+          asset_name: duplicate_finder-7.0.${{ needs.create-release.outputs.release_version }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
 
   build-windows:
@@ -110,6 +110,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./duplicate_finder-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
-          asset_name: duplicate_finder-windows-v0.0.${{ needs.create-release.outputs.release_version }}.zip
+          asset_path: ./duplicate_finder-windows-v7.0.${{ needs.create-release.outputs.release_version }}.zip
+          asset_name: duplicate_finder-windows-v7.0.${{ needs.create-release.outputs.release_version }}.zip
           asset_content_type: application/zip

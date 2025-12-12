@@ -57,10 +57,10 @@ jobs:
       - name: Build
         run: cmake --build build
 
-      - name: Package (creates .deb if CPack is configured)
+      - name: Create .deb package with CPack
         run: |
           cd build
-          cmake --build . --target package
+          cpack -G DEB
 
       - name: Locate and rename .deb to predictable name
         run: |

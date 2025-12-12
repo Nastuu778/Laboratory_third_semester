@@ -26,7 +26,7 @@ set(CPACK_GENERATOR "DEB")
 
 # Устанавливаем версию: используем COMMIT_COUNT, если задан
 if(COMMIT_COUNT)
-    set(CPACK_PACKAGE_VERSION "7.0.${COMMIT_COUNT}")
+    set(CPACK_PACKAGE_VERSION "1.1.${COMMIT_COUNT}")
 else()
-    set(CPACK_PACKAGE_VERSION "0.1.0")  # fallback для локальной сборки
+    set(CPACK_PACKAGE_VERSION "1.1.0")  # fallback для локальной сборки
 endif()
